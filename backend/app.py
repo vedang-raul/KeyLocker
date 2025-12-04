@@ -52,5 +52,20 @@ async def send_test(email_content:EmailContent):
         return {"Message" : "Email sent !"}
     except Exception as e:
         raise HTTPException(status_code=400,detail=str(e))
+@app.post("/verify_mail")
+async def verify_mail(email_content : EmailContent):
+    try:
+        responses = []
+        for email in email_content.EmailAddress:
+            response = ses_client.verify_email_address(EmailAddress = email)
+            responses.append(response)
+            return {
+                "Message" : "Verification Email sent !",
+                "Response" : responses
+                    }
+    except Exception as e:
+        raise HTTPException(status_code=400,detail=str(e))
+        
+
 
 
