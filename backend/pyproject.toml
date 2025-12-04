@@ -9,6 +9,8 @@ dependencies = [
     "fastapi>=0.122.0",
     "itsdangerous>=2.2.0",
     "pipenv>=2025.0.4",
+    "psycopg2-binary>=2.9.11",
     "python-dotenv>=1.2.1",
+    "sqlalchemy[asyncio]>=2.0.44",
     "uvicorn>=0.38.0",
 ]
