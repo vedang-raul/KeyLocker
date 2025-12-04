@@ -2,8 +2,10 @@ from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from typing import List
+from itsdangerous import URLSafeTimedSerializer
 import boto3
 import os
+
 
 
 load_dotenv()
@@ -68,4 +70,23 @@ async def verify_mail(email_content : EmailContent):
         
 
 
+@app.post("/verify_email")
+async def verify(email_content=EmailContent):
+    try:
+        secret_key=os.getenv("SECRET_KEY")
+        serializer=URLSafeTimedSerializer(secret_key)
 
+        user_id = email_content.EmailAddress
+        token = serializer.dumps(user_id,salt='email_confirm')
+
+        verification_link = f"https://yourdomain.com/verify_email/{token}"
+        print(f"verification Link: {verification_link}")
+
+        try: 
+            data = serializer.load(token, salt='email_confirm',max_age="8400")
+            print(f"Verified user ID: {data}")
+        except Exception as e:
+            print(f"Token invalid or expired: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=400,detail=(e))
+    
