@@ -54,7 +54,7 @@ async def send_test(email_content:EmailContent):
         return {"Message" : "Email sent !"}
     except Exception as e:
         raise HTTPException(status_code=400,detail=str(e))
-@app.post("/verify_mail")
+@app.post("/verify_mail_AWS")
 async def verify_mail(email_content : EmailContent):
     try:
         responses = []
