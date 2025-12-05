@@ -6,7 +6,11 @@ from itsdangerous import URLSafeTimedSerializer
 import boto3
 import os
 
+from db import get_db
+from models import Users
 
+class EmailContent(BaseModel):
+    EmailAddress : List[str]
 
 load_dotenv()
 
@@ -24,9 +28,6 @@ ses_client=boto3.client(
     aws_secret_access_key = AWS_SECRET_KEY
 )
 
-class EmailContent(BaseModel):
-    EmailAddress : List[str]
-    message:str = "Hello this is a test message from keylocker.in"
 
 
 @app.get("/")
@@ -46,7 +47,7 @@ async def send_test(email_content:EmailContent):
                         "Body" : {
                                     "Text" : 
                                     {
-                                    "Data" : email_content.message
+                                    "Data" : "Testing email from keylocker.in"
                                     } 
                                 }
                     }
