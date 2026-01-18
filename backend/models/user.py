@@ -5,12 +5,12 @@ from sqlalchemy.orm import relationship
 class Users(Base):
     __tablename__="users"
 
-    empID=Column(Integer,primary_key=True,index=True)
+    emp_id=Column(Integer,primary_key=True,index=True)
 
     email=Column(String,unique=True,index=True)
-    hashedPassword=Column(String)
-    Role=Column(String)
+    hashed_password=Column(String)
+    role=Column(String)
     
     
-    request=relationship("Requests",back_populates="user")#Establishes bidirectional relationship with APIkeys model which helps to get into the APIkeys table
-    apikey=relationship("APIkeys",back_populates="owner")
+    request=relationship("Requests",back_populates="user", lazy="selectin")#Establishes bidirectional relationship with APIkeys model which helps to get into the APIkeys table
+    apikey=relationship("APIkeys",back_populates="owner", lazy="selectin")

@@ -6,10 +6,10 @@ class Requests(Base):
     __tablename__="requests"
 
 
-    RequestID=Column(Integer,primary_key=True,index=True)
-    requesteeID=Column(Integer,ForeignKey("users.empID",ondelete="CASCADE"))
+    request_id=Column(Integer,primary_key=True,index=True)
+    requestee_id=Column(Integer,ForeignKey("users.emp_id",ondelete="CASCADE"))
 
-    Status=Column(String,default="Active")
-    APIname=Column(String)
+    status=Column(String,default="Active")
+    api_name=Column(String)
 
-    user=relationship("Users",back_populates="request") #Establishes bidirectional relationship with Users model which helps to get into the usersd table
+    user=relationship("Users",back_populates="request", lazy="selectin") #Establishes bidirectional relationship with Users model which helps to get into the usersd table
