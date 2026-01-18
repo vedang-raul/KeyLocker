@@ -6,8 +6,9 @@ from itsdangerous import URLSafeTimedSerializer
 import boto3
 import os
 
-from db import get_db
-from models import Users
+from db.db import get_db
+from models.user import Users
+
 
 class EmailContent(BaseModel):
     EmailAddress : List[str]
