@@ -9,7 +9,7 @@ class Requests(Base):
     request_id=Column(Integer,primary_key=True,index=True)
     requestee_id=Column(Integer,ForeignKey("users.emp_id",ondelete="CASCADE"))
 
-    status=Column(String,default="Active")
     api_name=Column(String)
+    status=Column(String,default="Pending")
 
     user=relationship("Users",back_populates="request", lazy="selectin") #Establishes bidirectional relationship with Users model which helps to get into the usersd table
