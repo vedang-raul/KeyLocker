@@ -9,7 +9,7 @@ class APIkeys(Base):
 
     owner_id=Column(Integer,ForeignKey("users.emp_id",ondelete="CASCADE"))
 
-    encrypted_key=Column(String,unique=True,index=True)
+    api_key=Column(String,unique=True,index=True)
     api_name=Column(String)
 
     owner=relationship("Users",back_populates="apikey", lazy="selectin")
