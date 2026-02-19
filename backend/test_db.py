@@ -1,6 +1,6 @@
 import asyncio
 from db.db import engine, Base, SessionLocal
-from models.user import Users 
+from backend.models.users import Users 
 from models.req import Requests
 from models.keys import APIkeys
 from sqlalchemy import select

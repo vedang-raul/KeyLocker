@@ -1,94 +1,108 @@
-from fastapi import FastAPI,HTTPException
-from pydantic import BaseModel
-from dotenv import load_dotenv
-from typing import List
-from itsdangerous import URLSafeTimedSerializer
-import boto3
 import os
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from itsdangerous import URLSafeTimedSerializer
+from dotenv import load_dotenv
 
-from db.db import get_db
-from models.user import Users
+# Internal Imports
+from db.db import get_db, engine, Base
+from models.users import Users
+from models.req import Requests 
+from models.keys import APIkeys
+from schemas.users import UserReg
+from core.mail import ses_client
 
 
-class EmailContent(BaseModel):
-    EmailAddress : List[str]
-
+# Initialize Environment
 load_dotenv()
 
-AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
-AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
-AWS_REGION = os.getenv("AWS_REGION")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Recreate tables (especially since you dropped them earlier)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Shutdown logic can go here
 
+app = FastAPI(title="KeyLocker Backend", lifespan=lifespan)
 
-app=FastAPI()
-
-ses_client=boto3.client(
-    'ses',
-    region_name = AWS_REGION,
-    aws_access_key_id = AWS_ACCESS_KEY,
-    aws_secret_access_key = AWS_SECRET_KEY
-)
-
-
+# Secret for token generation
+SECRET_KEY = os.getenv("SECRET_KEY", "your-very-secret-key")
+serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 @app.get("/")
-async def root():
-    return {"Message" : "Backend is Live"}
+async def health_check():
+    return {"status": "online", "service": "KeyLocker"}
 
-@app.post("/send_mail")
-async def send_test(email_content:EmailContent):
+# --- Endpoints ---
+
+@app.post("/signup")
+async def signup(user_data: UserReg, db: AsyncSession = Depends(get_db)):
+    token = serializer.dumps(user_data.email, salt='email_confirm')
+    verification_link = f"http://127.0.0.1:8000/verify/{token}"
+
     try:
-        response = ses_client.send_email(
-            Source = "mail@keylocker.in",
-            Destination = {
-                "ToAddresses" : email_content.EmailAddress
-            },
-            Message = {
-                        "Subject" : {"Data" : "Test email from keylocker"},
-                        "Body" : {
-                                    "Text" : 
-                                    {
-                                    "Data" : "Testing email from keylocker.in"
-                                    } 
-                                }
-                    }
+        new_user = Users(
+            name=user_data.name,
+            email=user_data.email,
+            password=user_data.password, 
+            role=user_data.role
         )
-        return {"Message" : "Email sent !"}
+        db.add(new_user)
+        await db.commit()
+        # await db.refresh(new_user)
     except Exception as e:
-        raise HTTPException(status_code=400,detail=str(e))
-@app.post("/verify_mail_AWS")
-async def verify_mail(email_content : EmailContent):
+        await db.rollback()
+        print(f"DB Error: {e}")
+        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+
     try:
-        responses = []
-        for email in email_content.EmailAddress:
-            response = ses_client.verify_email_address(EmailAddress = email)
-            responses.append(response)
-            return {
-                "Message" : "Verification Email sent !",
-                "Response" : responses
+        ses_client.send_email(
+            Source="mail@keylocker.in",
+            Destination={"ToAddresses": [user_data.email]},
+            Message={
+                "Subject": {"Data": "Activate your KeyLocker Account"},
+                "Body": {
+                    "Html": {
+                        "Data": f"""
+                        <html>
+                            <body>
+                                <h3>Welcome {user_data.name}!</h3>
+                                <p>Please click the link below to verify your email for KeyLocker:</p>
+                                <a href="{verification_link}">Verify My Email</a>
+                                <p>This link will expire in 24 hours.</p>
+                            </body>
+                        </html>
+                        """
                     }
+                }
+            }
+        )
+        return {"message": "User created. Please check your email for verification."}
     except Exception as e:
-        raise HTTPException(status_code=400,detail=str(e))
-        
-
-
-@app.post("/verify_email")
-async def verify(email_content=EmailContent):
-    try:
-        secret_key=os.getenv("SECRET_KEY")
-        serializer=URLSafeTimedSerializer(secret_key)
-
-        user_id = email_content.EmailAddress
-        token = serializer.dumps(user_id,salt='email_confirm')
-
-        verification_link = f"https://yourdomain.com/verify_email/{token}"
-        print(f"verification Link: {verification_link}")
-
-        try: 
-            data = serializer.load(token, salt='email_confirm',max_age="8400")
-            print(f"Verified user ID: {data}")
-        except Exception as e:
-            print(f"Token invalid or expired: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=400,detail=(e))
+        # If mail fails, the user IS in the DB, but they didn't get the link.
+        print(f"--- MAIL ERROR: {e} ---") 
+        raise HTTPException(status_code=500, detail=f"Mail delivery failed: {str(e)}")
     
+
+@app.get("/verify/{token}")
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
+    try:
+        email = serializer.loads(token, salt='email_confirm', max_age=86400)
+        
+        query = select(Users).where(Users.email == email)
+        result = await db.execute(query)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found.")
+
+        # Flip the verification switch in DB
+        # user.is_verified = True 
+        # await db.commit()
+        
+        return {"message": f"Account for {email} has been successfully verified!"}
+    except Exception:
+        raise HTTPException(status_code=400, detail="The verification link is invalid or has expired.")

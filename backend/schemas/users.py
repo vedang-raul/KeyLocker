@@ -1,7 +1,8 @@
 from pydantic import BaseModel,EmailStr,ConfigDict
-from typing import optional 
+from typing import Optional 
 
 class UserReg(BaseModel):
+    name : str
     email : EmailStr
     password : str
     role : str ="User"

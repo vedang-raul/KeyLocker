@@ -17,9 +17,10 @@ SessionLocal = async_sessionmaker(
 
 Base=declarative_base()
 
-def get_db():
-    db=SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    async with SessionLocal() as db:
+        try:
+            yield db
+        finally:
+            # You must await the close in an async setup
+            await db.close()
