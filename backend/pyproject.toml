@@ -9,6 +9,7 @@ dependencies = [
     "bcrypt>=5.0.0",
     "boto3>=1.41.5",
     "fastapi>=0.122.0",
+    "gunicorn>=25.1.0",
     "itsdangerous>=2.2.0",
     "jose>=1.0.0",
     "passlib[bcrypt]>=1.7.4",
