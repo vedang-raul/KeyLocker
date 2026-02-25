@@ -3,377 +3,324 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KeyLocker MVP</title>
+    <title>KeyLocker | Secure Key Management</title>
     <style>
-    /* --- Base Styles --- */
-        body { font-family: sans-serif; display: flex; justify-content: center; background: #f4f4f9; padding: 20px; transition: background 0.3s; }
-        .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 350px; transition: background 0.3s; }
-        h2 { color: #333; margin-bottom: 1.5rem; text-align: center; }
-        input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .message { margin-top: 15px; font-size: 0.9rem; text-align: center; color: #666; }
-        .toggle-link { color: #007bff; cursor: pointer; text-decoration: underline; }
+        /* --- Digital Rain Background Layer --- */
+        .bg-animation {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            --c: rgb(255, 251, 0);
+            background-color: #000;
+            background-image: 
+                radial-gradient(4px 100px at 0px 235px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 235px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 117.5px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 252px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 252px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 126px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 150px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 150px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 75px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 253px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 253px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 126.5px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 204px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 204px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 102px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 134px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 134px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 67px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 179px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 179px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 89.5px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 299px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 299px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 149.5px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 215px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 215px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 107.5px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 281px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 281px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 140.5px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 158px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 158px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 79px, var(--c) 100%, #0000 150%),
+                radial-gradient(4px 100px at 0px 210px, var(--c), #0000),
+                radial-gradient(4px 100px at 300px 210px, var(--c), #0000),
+                radial-gradient(1.5px 1.5px at 150px 105px, var(--c) 100%, #0000 150%);
+            background-size: 300px 235px, 300px 235px, 300px 235px, 300px 252px, 300px 252px, 300px 252px, 300px 150px, 300px 150px, 300px 150px, 300px 253px, 300px 253px, 300px 253px, 300px 204px, 300px 204px, 300px 204px, 300px 134px, 300px 134px, 300px 134px, 300px 179px, 300px 179px, 300px 179px, 300px 299px, 300px 299px, 300px 299px, 300px 215px, 300px 215px, 300px 215px, 300px 281px, 300px 281px, 300px 281px, 300px 158px, 300px 158px, 300px 158px, 300px 210px, 300px 210px, 300px 210px;
+            animation: hi 150s linear infinite;
+        }
 
-        /* --- API Card & Badge Styles --- */
-        .api-card { border: 1px solid #ddd; padding: 10px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .api-card.approved { border-color: #28a745; background: #f8fff9; }
-        .masked-key { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px; font-size: 0.85rem; }
-        
+        .bg-animation::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            backdrop-filter: blur(0.1em) brightness(1.1);
+            background-image: radial-gradient(circle at 50% 50%, #0000 0, #0000 2px, hsl(0 0 4% / 15%) 2px);
+            background-size: 8px 8px;
+        }
+
+        @keyframes hi {
+            0% { background-position: 0px 220px, 3px 220px, 151.5px 337.5px, 25px 24px, 28px 24px, 176.5px 150px, 50px 16px, 53px 16px, 201.5px 91px, 75px 224px, 78px 224px, 226.5px 350.5px, 100px 19px, 103px 19px, 251.5px 121px, 125px 120px, 128px 120px, 276.5px 187px, 150px 31px, 153px 31px, 301.5px 120.5px, 175px 235px, 178px 235px, 326.5px 384.5px, 200px 121px, 203px 121px, 351.5px 228.5px, 225px 224px, 228px 224px, 376.5px 364.5px, 250px 26px, 253px 26px, 401.5px 105px, 275px 75px, 278px 75px, 426.5px 180px; }
+            to { background-position: 0px 6800px, 3px 6800px, 151.5px 6917.5px, 25px 13632px, 28px 13632px, 176.5px 13758px, 50px 5416px, 53px 5416px, 201.5px 5491px, 75px 17175px, 78px 17175px, 226.5px 17301.5px, 100px 5119px, 103px 5119px, 251.5px 5221px, 125px 8428px, 128px 8428px, 276.5px 8495px, 150px 9876px, 153px 9876px, 301.5px 9965.5px, 175px 13391px, 178px 13391px, 326.5px 13540.5px, 200px 14741px, 203px 14741px, 351.5px 14848.5px, 225px 18770px, 228px 18770px, 376.5px 18910.5px, 250px 5082px, 253px 5082px, 401.5px 5161px, 275px 6375px, 278px 6375px, 426.5px 6480px; }
+        }
+
+        /* --- Base & Glassmorphism Styles --- */
+        body { margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        .container { position: relative; z-index: 2; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); padding: 2rem; border-radius: 15px; width: 380px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); transition: background 0.3s; }
+        h2, h3 { color: #222; text-align: center; margin-bottom: 1rem; }
+        input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        button { width: 100%; padding: 12px; background: #c3bf04db; color: rgb(9, 9, 9); border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: background 0.2s; }
+        button:hover { background: #c3bf04db; }
+        .message { margin-top: 15px; font-size: 0.9rem; text-align: center; color: #555; }
+        .toggle-link { color: #c3bf04db; cursor: pointer; text-decoration: underline; font-weight: 500; }
+
+        /* --- Panels & Cards --- */
+        .api-card { border: 1px solid #ddd; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.03); }
+        .api-card.approved { border-color: #28a745; background: rgba(40, 167, 69, 0.1); }
+        .masked-key { font-family: 'Courier New', Courier, monospace; background: #eee; padding: 3px 6px; border-radius: 4px; font-size: 0.85rem; }
+        .stats-bar { display: flex; justify-content: space-around; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; }
+
         /* --- Dark Mode Overrides --- */
-        body.dark-mode { background: #121212; color: white; }
-        .dark-mode .container { background: #1e1e1e; color: white; border: 1px solid #333; }
-        .dark-mode h2, .dark-mode h3 { color: #fff; }
-        .dark-mode input { background: #333; color: white; border-color: #444; }
-        .dark-mode .api-card { border-color: #444; }
-        .dark-mode .api-card.approved { background: #1a2e1a; border-color: #28a745; }
-        .dark-mode .masked-key { background: #444; color: #aaa; }
-        .dark-mode .message { color: #aaa; }
+        body.dark-mode .container { background: rgba(25, 25, 25, 0.85); color: #eee; border: 1px solid rgba(255,255,255,0.1); }
+        body.dark-mode h2, body.dark-mode h3 { color: #fff; }
+        body.dark-mode input { background: #333; color: white; border-color: #444; }
+        body.dark-mode .api-card { background: rgba(255,255,255,0.05); border-color: #444; }
+        body.dark-mode .masked-key { background: #444; color: #ddd; }
+        body.dark-mode .stats-bar { background: rgba(255,255,255,0.1); }
+        body.dark-mode .message { color: #bbb; }
     </style>
 </head>
 <body>
-    <button onclick="toggleDarkMode()" style="width: auto; position: absolute; top: 10px; right: 10px;">🌓 Toggle Dark Mode</button>
+    <div class="bg-animation"></div>
+    <button onclick="toggleDarkMode()" style="width: auto; position: absolute; top: 15px; right: 15px; z-index: 10; padding: 8px 12px;">🌓 Toggle Dark Mode</button>
 
-<div class="container" id="main-container">
-    <div id="auth-view">
-        <h2 id="form-title">KeyLocker Login</h2>
-    
-        <div id="signup-fields" style="display:none;">
-            <input type="text" id="name" placeholder="Full Name">
+    <div class="container" id="main-container">
+        <div id="auth-view">
+            <h2 id="form-title">KeyLocker Login</h2>
+            <div id="signup-fields" style="display:none;"><input type="text" id="name" placeholder="Full Name"></div>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="handleAuth()" id="submit-btn">Login</button>
+            <p class="message"><span id="toggle-text">Don't have an account?</span> <span class="toggle-link" onclick="toggleMode()">Click here</span></p>
+            <p class="message"><span class="toggle-link" onclick="forgotPassword()">Forgot Password?</span></p>
+            <div id="auth-msg" class="message"></div>
         </div>
 
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password">
-    
-        <button onclick="handleAuth()" id="submit-btn">Login</button>
-
-        <p class="message">
-            <span id="toggle-text">Don't have an account?</span> 
-            <span class="toggle-link" onclick="toggleMode()">Click here</span>
-        </p>
-        <div id="auth-msg" class="message"></div>
-    </div>
-
-    <div id="dashboard-view" style="display:none;">
-        <h2 id="welcome-msg">Dashboard</h2>
-        <hr>
-        
-        <div id="admin-panel" style="display:none;">
-            <h3>Admin: Manage Keys</h3>
-            <input type="text" id="new-api-name" placeholder="API Name (e.g. OpenAI)">
-            <input type="text" id="new-api-key" placeholder="API Key (e.g. sk-...)">
-            <button onclick="adminAddKey()">Create & Add Key</button>
-            <h4>Pending Requests</h4>
-            <div id="admin-requests-list">No pending requests.</div>
-        </div>
-
-        <div id="user-panel" style="display:none;">
-            <div id="user-stats" style="display:flex; justify-content:space-around; background:#eee; padding:10px; border-radius:5px; margin-bottom:15px; color:#333;">
-                <span>Approved: <b id="stat-approved">0</b></span>
-                <span>Consumed: <b id="stat-consumed">0</b></span>
+        <div id="dashboard-view" style="display:none;">
+            <h2 id="welcome-msg">Dashboard</h2>
+            <hr style="opacity: 0.2; margin: 15px 0;">
+            
+            <div id="admin-panel" style="display:none;">
+                <h3>Admin: Manage Keys</h3>
+                <input type="text" id="new-api-name" placeholder="API Name (e.g. OpenAI)">
+                <input type="text" id="new-api-key" placeholder="API Key">
+                <button onclick="adminAddKey()">Create & Add Key</button>
+                <h4 style="margin-top: 20px;">Pending Requests</h4>
+                <div id="admin-requests-list">No pending requests.</div>
             </div>
-            <h3>User: Request Access</h3>
-            <p>Available APIs:</p>
-            <div id="user-api-list">
-                <div style="border:1px solid #ddd; padding:10px; margin-bottom:5px;">
-                    <strong>Google Maps API</strong>
-                    <button onclick="userMakeRequest('Google Maps')">Request Key</button>
+
+            <div id="user-panel" style="display:none;">
+                <div class="stats-bar">
+                    <span>Approved: <b id="stat-approved">0</b></span>
+                    <span>Consumed: <b id="stat-consumed">0</b></span>
                 </div>
+                <h3>Request API Access</h3>
+                <div id="user-api-list">Loading APIs...</div>
             </div>
+
+            <button onclick="location.reload()" style="background:#555; margin-top: 20px;">Logout</button>
         </div>
-
-        <br>
-        <button onclick="location.reload()" style="background:#666;">Logout</button>
     </div>
-</div>
 
-<script>
-    const API_BASE = "http://127.0.0.1:8000";
-    let currentUser = null;
-    let isLogin = true;
-    let token = localStorage.getItem('token') || null;
+    <script>
+        const API_BASE = "http://127.0.0.1:8000";
+        let currentUser = null;
+        let isLogin = true;
 
-    function toggleMode() {
-        isLogin = !isLogin;
-        const title = document.getElementById('form-title');
-        const signupFields = document.getElementById('signup-fields');
-        const submitBtn = document.getElementById('submit-btn');
-        const toggleText = document.getElementById('toggle-text');
-
-        if (isLogin) {
-            title.innerText = "KeyLocker Login";
-            submitBtn.innerText = "Login";
-            toggleText.innerText = "Don't have an account?";
-            signupFields.style.display = "none";
-        } else {
-            title.innerText = "Create Account";
-            submitBtn.innerText = "Sign Up";
-            toggleText.innerText = "Already have an account?";
-            signupFields.style.display = "block";
+        function toggleMode() {
+            isLogin = !isLogin;
+            document.getElementById('form-title').innerText = isLogin ? "KeyLocker Login" : "Create Account";
+            document.getElementById('submit-btn').innerText = isLogin ? "Login" : "Sign Up";
+            document.getElementById('toggle-text').innerText = isLogin ? "Don't have an account?" : "Already have an account?";
+            document.getElementById('signup-fields').style.display = isLogin ? "none" : "block";
         }
-    }
 
-    async function handleAuth() {
-        if (isLogin) {
-            await handleLogin();
-        } else {
-            await handleSignup();
+        async function handleAuth() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const msgDiv = document.getElementById('auth-msg');
+
+            if (isLogin) {
+                try {
+                    const res = await fetch(`${API_BASE}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        localStorage.setItem('token', data.access_token);
+                        currentUser = data.user;
+                        showDashboard();
+                    } else { alert(data.detail); }
+                } catch (e) { alert("Backend unreachable"); }
+            } else {
+                const name = document.getElementById('name').value;
+                msgDiv.innerText = "Creating account...";
+                try {
+                    const res = await fetch(`${API_BASE}/signup`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, password, role: "User" })
+                    });
+                    const data = await res.json();
+                    msgDiv.innerText = data.message;
+                    msgDiv.style.color = res.ok ? "green" : "red";
+                    if (res.ok) setTimeout(toggleMode, 2500);
+                } catch (e) { msgDiv.innerText = "Connection failed."; }
+            }
         }
-    }
 
-    async function handleSignup() {
-        const msgDiv = document.getElementById('auth-msg');
-        msgDiv.innerText = "Creating account...";
-        
-        const payload = {
-            name: document.getElementById('name').value,
-            email: document.getElementById('email').value,
-            password: document.getElementById('password').value,
-            role: "User" // Default role for new signups
-        };
+        async function forgotPassword() {
+            const email = prompt("Enter your registered email:");
+            if (!email) return;
+            try {
+                const res = await fetch(`${API_BASE}/forgot-password?email=${encodeURIComponent(email)}`, { method: 'POST' });
+                const data = await res.json();
+                alert(data.message);
+            } catch (e) { alert("Error sending reset link."); }
+        }
 
-        try {
-            const response = await fetch(`${API_BASE}/signup`, {
+        function showDashboard() {
+            document.getElementById('auth-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'block';
+            document.getElementById('welcome-msg').innerText = `Welcome, ${currentUser.name}`;
+
+            if (currentUser.role.toLowerCase() === 'admin') {
+                document.getElementById('admin-panel').style.display = 'block';
+                loadPendingRequests();
+            } else {
+                document.getElementById('user-panel').style.display = 'block';
+                updateStats();
+                loadUserAPIs();
+            }
+        }
+
+        async function updateStats() {
+            try {
+                const res = await fetch(`${API_BASE}/user/stats/${currentUser.emp_id}`);
+                const stats = await res.json();
+                document.getElementById('stat-approved').innerText = stats.approved;
+                document.getElementById('stat-consumed').innerText = stats.consumed;
+            } catch (e) { console.error(e); }
+        }
+
+        async function adminAddKey() {
+            const payload = {
+                api_name: document.getElementById('new-api-name').value,
+                api_key: document.getElementById('new-api-key').value,
+                owner_id: currentUser.emp_id 
+            };
+            const res = await fetch(`${API_BASE}/admin/keys`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                msgDiv.style.color = "green";
-                msgDiv.innerText = data.message;
-                // Automatically switch back to login mode after success
-                setTimeout(toggleMode, 2000);
-            } else {
-                msgDiv.style.color = "red";
-                msgDiv.innerText = data.detail || "Signup failed";
-            }
-        } catch (error) {
-            msgDiv.style.color = "red";
-            msgDiv.innerText = "Could not connect to backend.";
+            const data = await res.json();
+            alert(data.message);
+            document.getElementById('new-api-name').value = '';
+            document.getElementById('new-api-key').value = '';
         }
-    }
 
-    async function handleLogin() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        try {
-            const response = await fetch(`${API_BASE}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            const data = await response.json();
-
-            if (response.ok) {
-                token = data.access_token;
-                localStorage.setItem('token', token); // Persist session
-                currentUser = data.user;
-                showDashboard();
-            } else {
-                alert(data.detail);
-            }
-        } catch (e) { alert("Backend unreachable"); }
-    }
-
-    function showDashboard() {
-        document.getElementById('auth-view').style.display = 'none';
-        document.getElementById('dashboard-view').style.display = 'block';
-        document.getElementById('welcome-msg').innerText = `Welcome, ${currentUser.name}`;
-
-        if (currentUser.role.toLowerCase() === 'admin') {
-            document.getElementById('admin-panel').style.display = 'block';
-            loadPendingRequests(); // Load admin data
-        } else {
-            document.getElementById('user-panel').style.display = 'block';
-            updateStats(); //Load user stats
-            loadUserAPIs(); // Load user data
-        }
-    }
-
-    // --- Admin Actions ---
-    async function adminAddKey() {
-        const payload = {
-            api_name: document.getElementById('new-api-name').value,
-            api_key: document.getElementById('new-api-key').value,
-            owner_id: currentUser.emp_id 
-        };
-
-        const response = await fetch(`${API_BASE}/admin/keys`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        alert(data.message);
-        document.getElementById('new-api-name').value = '';
-        document.getElementById('new-api-key').value = '';
-    }
-
-    async function loadPendingRequests() {
-        const response = await fetch(`${API_BASE}/admin/requests`);
-        const requests = await response.json();
-        const list = document.getElementById('admin-requests-list');
-        
-        list.innerHTML = requests.length === 0 ? "No pending requests." : requests.map(req => `
-            <div class="api-card">
-                <span>
-                    <strong>${req.api_name}</strong> <br>
-                    <small>By: ${req.user_name}</small>
-                </span>
-                <div style="display: flex; gap: 5px;">
-                    <button onclick="approveRequest(${req.request_id})" style="width:auto; background:#28a745;">Approve</button>
-                    <button onclick="rejectRequest(${req.request_id})" style="width:auto; background:#dc3545;">Reject</button>
+        async function loadPendingRequests() {
+            const res = await fetch(`${API_BASE}/admin/requests`);
+            const requests = await res.json();
+            const list = document.getElementById('admin-requests-list');
+            list.innerHTML = requests.length === 0 ? "No pending requests." : requests.map(req => `
+                <div class="api-card">
+                    <span><strong>${req.api_name}</strong><br><small>By: ${req.user_name}</small></span>
+                    <div style="display:flex; gap:5px;">
+                        <button onclick="approveRequest(${req.request_id})" style="width:auto; background:#28a745; padding:5px 10px;">✔</button>
+                        <button onclick="rejectRequest(${req.request_id})" style="width:auto; background:#dc3545; padding:5px 10px;">✖</button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
-    }
-
-    async function approveRequest(reqId) {
-        const response = await fetch(`${API_BASE}/admin/requests/${reqId}/approve`, {
-            method: 'PATCH'
-        });
-        const data = await response.json();
-        alert(data.message);
-        loadPendingRequests(); 
-    }
-
-    // --- User Actions ---
-    async function loadUserAPIs() {
-        try {
-            const [apisRes, reqsRes, keysRes] = await Promise.all([
-                fetch(`${API_BASE}/user/available-apis`),
-                fetch(`${API_BASE}/user/my-requests/${currentUser.emp_id}`),
-                fetch(`${API_BASE}/user/my-keys/${currentUser.emp_id}`)
-            ]);
-
-            const apis = await apisRes.json();
-            const pendingReqs = await reqsRes.json();
-            const approvedKeys = await keysRes.json();
-
-            const list = document.getElementById('user-api-list');
-            list.innerHTML = apis.map((api, index) => {
-                const approvedObj = approvedKeys.find(k => k.api_name === api);
-                const isPending = pendingReqs.includes(api);
-
-                if (approvedObj) {
-                    // Unique ID for the container so we can hide it later
-                    const containerId = `key-container-${index}`;
-                    const masked = `****${approvedObj.api_key.slice(-4)}`;
-
-                    return `
-                        <div class="api-card approved" id="${containerId}">
-                            <strong>${api}</strong>
-                            <span class="masked-key">${masked}</span>
-                            <button onclick="copyAndHide('${api}', '${approvedObj.api_key}', '${containerId}')" style="background:#28a745;">Copy & Hide</button>
-                        </div>`;
-                } else if (isPending) {
-                    return `
-                        <div class="api-card">
-                            <strong>${api}</strong>
-                            <button disabled style="background:#6c757d;">Requested</button>
-                        </div>`;
-                } else {
-                    return `
-                        <div class="api-card">
-                            <strong>${api}</strong>
-                            <button onclick="userMakeRequest('${api}', this)">Request Key</button>
-                        </div>`;
-                }
-            }).join('');
-        } catch (e) { console.error(e); }
-    }
-
-    async function userMakeRequest(apiName, btnElement) {
-    // 1. Immediately provide visual feedback
-    const originalText = btnElement.innerText;
-    btnElement.innerText = "Requested";
-    btnElement.disabled = true; // Prevent double submissions
-    btnElement.style.background = "#6c757d"; // Change to a "disabled" gray color
-
-    const payload = {
-        api_name: apiName,
-        requestee_id: currentUser.emp_id
-    };
-
-    try {
-        const response = await fetch(`${API_BASE}/user/request`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        const data = await response.json();
-
-        if (!response.ok) {
-            // If the server fails, revert the button so they can try again
-            alert("Error: " + data.detail);
-            btnElement.innerText = originalText;
-            btnElement.disabled = false;
-            btnElement.style.background = "#007bff";
+            `).join('');
         }
-    } catch (error) {
-        alert("Backend unreachable.");
-        btnElement.innerText = originalText;
-        btnElement.disabled = false;
-        btnElement.style.background = "#007bff";
-    }
-    
-}
-    async function copyAndHide(apiName, key, containerId) {
-        // 1. Copy to clipboard
-        await navigator.clipboard.writeText(key);
-        
-        // 2. Encode the name to handle spaces (e.g., "Chat GPT" -> "Chat%20GPT")
-        const url = `${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(apiName)}&user_id=${currentUser.emp_id}`;
 
-        try {
-            const response = await fetch(url, {
-                method: 'PATCH'
-            });
+        async function approveRequest(id) {
+            const res = await fetch(`${API_BASE}/admin/requests/${id}/approve`, { method: 'PATCH' });
+            const data = await res.json();
+            alert(data.message);
+            loadPendingRequests();
+        }
 
-            if (response.ok) {
-                alert('Key copied! It has been burned from the database and won\'t reappear.');
-                // 3. Remove from UI
-                const element = document.getElementById(containerId);
-                if (element) element.remove(); 
-            } else {
-                const errorData = await response.json();
-                console.error("Burn failed:", errorData.detail);
+        async function rejectRequest(id) {
+            const reason = prompt("Reason for rejection:");
+            if (!reason) return;
+            const res = await fetch(`${API_BASE}/admin/requests/${id}/reject?reason=${encodeURIComponent(reason)}`, { method: 'PATCH' });
+            const data = await res.json();
+            alert(data.message);
+            loadPendingRequests();
+        }
+
+        async function loadUserAPIs() {
+            try {
+                const [apisRes, reqsRes, keysRes] = await Promise.all([
+                    fetch(`${API_BASE}/user/available-apis`),
+                    fetch(`${API_BASE}/user/my-requests/${currentUser.emp_id}`),
+                    fetch(`${API_BASE}/user/my-keys/${currentUser.emp_id}`)
+                ]);
+                const apis = await apisRes.json();
+                const pendingReqs = await reqsRes.json();
+                const approvedKeys = await keysRes.json();
+                const list = document.getElementById('user-api-list');
+
+                list.innerHTML = apis.map((api, i) => {
+                    const approvedObj = approvedKeys.find(k => k.api_name === api);
+                    const isPending = pendingReqs.includes(api);
+                    if (approvedObj) {
+                        const cid = `key-${i}`;
+                        return `<div class="api-card approved" id="${cid}">
+                            <strong>${api}</strong> <span class="masked-key">****${approvedObj.api_key.slice(-4)}</span>
+                            <button onclick="copyAndHide('${api}', '${approvedObj.api_key}', '${cid}')" style="width:auto; background:#28a745;">Copy</button>
+                        </div>`;
+                    } else if (isPending) {
+                        return `<div class="api-card"><strong>${api}</strong> <button disabled style="width:auto; background:#666;">Pending</button></div>`;
+                    } else {
+                        return `<div class="api-card"><strong>${api}</strong> <button onclick="userMakeRequest('${api}', this)" style="width:auto;">Request</button></div>`;
+                    }
+                }).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function userMakeRequest(api, btn) {
+            btn.innerText = "..."; btn.disabled = true;
+            try {
+                const res = await fetch(`${API_BASE}/user/request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_name: api, requestee_id: currentUser.emp_id })
+                });
+                if (res.ok) { btn.innerText = "Pending"; btn.style.background = "#666"; }
+                else { btn.innerText = "Request"; btn.disabled = false; }
+            } catch (e) { alert("Error making request."); }
+        }
+
+        async function copyAndHide(name, key, cid) {
+            await navigator.clipboard.writeText(key);
+            const res = await fetch(`${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, { method: 'PATCH' });
+            if (res.ok) {
+                alert("Key copied and burned!");
+                document.getElementById(cid).remove();
+                updateStats();
             }
-        } catch (e) {
-            console.error("Failed to connect to backend:", e);
         }
-    }
-    async function rejectRequest(reqId) {
-        const reason = prompt("Enter rejection reason:");
-        if (!reason) return; // Cancel if no reason provided
 
-        const response = await fetch(`${API_BASE}/admin/requests/${reqId}/reject?reason=${encodeURIComponent(reason)}`, {
-            method: 'PATCH'
-        });
-
-        const data = await response.json();
-        alert(data.message);
-        loadPendingRequests(); 
-    }
-    async function updateStats() {
-        try {
-            const response = await fetch(`${API_BASE}/user/stats/${currentUser.emp_id}`);
-            const stats = await response.json();
-
-            document.getElementById('stat-approved').innerText = stats.approved;
-            document.getElementById('stat-consumed').innerText = stats.consumed;
-        } catch (e) {
-            console.error("Failed to fetch stats:", e);
-        }
-    }
-    function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-        }
-</script>
+        function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
+    </script>
 </body>
 </html>
