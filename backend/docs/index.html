@@ -5,17 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KeyLocker MVP</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; background: #f4f4f9; padding: 20px; }
-        .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 350px; }
+    /* --- Base Styles --- */
+        body { font-family: sans-serif; display: flex; justify-content: center; background: #f4f4f9; padding: 20px; transition: background 0.3s; }
+        .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 350px; transition: background 0.3s; }
         h2 { color: #333; margin-bottom: 1.5rem; text-align: center; }
         input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background: #0056b3; }
         .message { margin-top: 15px; font-size: 0.9rem; text-align: center; color: #666; }
         .toggle-link { color: #007bff; cursor: pointer; text-decoration: underline; }
+
+        /* --- API Card & Badge Styles --- */
+        .api-card { border: 1px solid #ddd; padding: 10px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .api-card.approved { border-color: #28a745; background: #f8fff9; }
+        .masked-key { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px; font-size: 0.85rem; }
+        
+        /* --- Dark Mode Overrides --- */
+        body.dark-mode { background: #121212; color: white; }
+        .dark-mode .container { background: #1e1e1e; color: white; border: 1px solid #333; }
+        .dark-mode h2, .dark-mode h3 { color: #fff; }
+        .dark-mode input { background: #333; color: white; border-color: #444; }
+        .dark-mode .api-card { border-color: #444; }
+        .dark-mode .api-card.approved { background: #1a2e1a; border-color: #28a745; }
+        .dark-mode .masked-key { background: #444; color: #aaa; }
+        .dark-mode .message { color: #aaa; }
     </style>
 </head>
 <body>
+    <button onclick="toggleDarkMode()" style="width: auto; position: absolute; top: 10px; right: 10px;">🌓 Toggle Dark Mode</button>
 
 <div class="container" id="main-container">
     <div id="auth-view">
@@ -51,6 +68,10 @@
         </div>
 
         <div id="user-panel" style="display:none;">
+            <div id="user-stats" style="display:flex; justify-content:space-around; background:#eee; padding:10px; border-radius:5px; margin-bottom:15px; color:#333;">
+                <span>Approved: <b id="stat-approved">0</b></span>
+                <span>Consumed: <b id="stat-consumed">0</b></span>
+            </div>
             <h3>User: Request Access</h3>
             <p>Available APIs:</p>
             <div id="user-api-list">
@@ -70,6 +91,7 @@
     const API_BASE = "http://127.0.0.1:8000";
     let currentUser = null;
     let isLogin = true;
+    let token = localStorage.getItem('token') || null;
 
     function toggleMode() {
         isLogin = !isLogin;
@@ -147,6 +169,8 @@
             const data = await response.json();
 
             if (response.ok) {
+                token = data.access_token;
+                localStorage.setItem('token', token); // Persist session
                 currentUser = data.user;
                 showDashboard();
             } else {
@@ -165,6 +189,7 @@
             loadPendingRequests(); // Load admin data
         } else {
             document.getElementById('user-panel').style.display = 'block';
+            updateStats(); //Load user stats
             loadUserAPIs(); // Load user data
         }
     }
@@ -194,9 +219,15 @@
         const list = document.getElementById('admin-requests-list');
         
         list.innerHTML = requests.length === 0 ? "No pending requests." : requests.map(req => `
-            <div style="border:1px solid #ddd; padding:10px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                <span><strong>${req.api_name}</strong> (User ID: ${req.requestee_id})</span>
-                <button onclick="approveRequest(${req.request_id})" style="width:auto; background:#28a745;">Approve</button>
+            <div class="api-card">
+                <span>
+                    <strong>${req.api_name}</strong> <br>
+                    <small>By: ${req.user_name}</small>
+                </span>
+                <div style="display: flex; gap: 5px;">
+                    <button onclick="approveRequest(${req.request_id})" style="width:auto; background:#28a745;">Approve</button>
+                    <button onclick="rejectRequest(${req.request_id})" style="width:auto; background:#dc3545;">Reject</button>
+                </div>
             </div>
         `).join('');
     }
@@ -221,31 +252,33 @@
 
             const apis = await apisRes.json();
             const pendingReqs = await reqsRes.json();
-            const approvedKeys = await keysRes.json(); // Array of {api_name, api_key}
-        
+            const approvedKeys = await keysRes.json();
+
             const list = document.getElementById('user-api-list');
-            list.innerHTML = apis.map(api => {
+            list.innerHTML = apis.map((api, index) => {
                 const approvedObj = approvedKeys.find(k => k.api_name === api);
                 const isPending = pendingReqs.includes(api);
 
                 if (approvedObj) {
-                    // STATE 3: APPROVED - Show Reveal Button
+                    // Unique ID for the container so we can hide it later
+                    const containerId = `key-container-${index}`;
+                    const masked = `****${approvedObj.api_key.slice(-4)}`;
+
                     return `
-                        <div style="border:1px solid #28a745; padding:10px; margin-bottom:5px;">
+                        <div class="api-card approved" id="${containerId}">
                             <strong>${api}</strong>
-                            <button onclick="alert('Your Key: ${approvedObj.api_key}')" style="background:#28a745;">View Key</button>
+                            <span class="masked-key">${masked}</span>
+                            <button onclick="copyAndHide('${api}', '${approvedObj.api_key}', '${containerId}')" style="background:#28a745;">Copy & Hide</button>
                         </div>`;
                 } else if (isPending) {
-                    // STATE 2: PENDING - Disabled "Requested" button
                     return `
-                        <div style="border:1px solid #ddd; padding:10px; margin-bottom:5px;">
+                        <div class="api-card">
                             <strong>${api}</strong>
                             <button disabled style="background:#6c757d;">Requested</button>
                         </div>`;
                 } else {
-                    // STATE 1: NEW - Active "Request" button
                     return `
-                        <div style="border:1px solid #ddd; padding:10px; margin-bottom:5px;">
+                        <div class="api-card">
                             <strong>${api}</strong>
                             <button onclick="userMakeRequest('${api}', this)">Request Key</button>
                         </div>`;
@@ -288,7 +321,59 @@
         btnElement.disabled = false;
         btnElement.style.background = "#007bff";
     }
+    
 }
+    async function copyAndHide(apiName, key, containerId) {
+        // 1. Copy to clipboard
+        await navigator.clipboard.writeText(key);
+        
+        // 2. Encode the name to handle spaces (e.g., "Chat GPT" -> "Chat%20GPT")
+        const url = `${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(apiName)}&user_id=${currentUser.emp_id}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'PATCH'
+            });
+
+            if (response.ok) {
+                alert('Key copied! It has been burned from the database and won\'t reappear.');
+                // 3. Remove from UI
+                const element = document.getElementById(containerId);
+                if (element) element.remove(); 
+            } else {
+                const errorData = await response.json();
+                console.error("Burn failed:", errorData.detail);
+            }
+        } catch (e) {
+            console.error("Failed to connect to backend:", e);
+        }
+    }
+    async function rejectRequest(reqId) {
+        const reason = prompt("Enter rejection reason:");
+        if (!reason) return; // Cancel if no reason provided
+
+        const response = await fetch(`${API_BASE}/admin/requests/${reqId}/reject?reason=${encodeURIComponent(reason)}`, {
+            method: 'PATCH'
+        });
+
+        const data = await response.json();
+        alert(data.message);
+        loadPendingRequests(); 
+    }
+    async function updateStats() {
+        try {
+            const response = await fetch(`${API_BASE}/user/stats/${currentUser.emp_id}`);
+            const stats = await response.json();
+
+            document.getElementById('stat-approved').innerText = stats.approved;
+            document.getElementById('stat-consumed').innerText = stats.consumed;
+        } catch (e) {
+            console.error("Failed to fetch stats:", e);
+        }
+    }
+    function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
 </script>
 </body>
 </html>

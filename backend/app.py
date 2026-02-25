@@ -1,12 +1,14 @@
+from datetime import datetime, timedelta
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException,status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from itsdangerous import URLSafeTimedSerializer
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import update
+from jose import JWTError,jwt
 # Internal Imports
 from db.db import get_db, engine, Base
 from models.users import Users
@@ -44,6 +46,13 @@ app.add_middleware(
 SECRET_KEY = os.getenv("SECRET_KEY", "your-very-secret-key")
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 @app.get("/")
 async def health_check():
     return {"status": "online", "service": "KeyLocker"}
@@ -126,15 +135,31 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="The verification link is invalid or has expired.")
 @app.post("/login")
 async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
+    # 1. Fetch user from database
     query = select(Users).where(Users.email == credentials.email)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
 
+    # 2. Validate credentials (Email and Password)
     if not user or not PasswordHasher.verify_password(credentials.password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Invalid email or password"
+        )
+    
+    # 3. STRICT CHECK: Enforce email verification
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Account not verified. Please check your email for the activation link."
+        )
+    
+    # 4. Generate JWT for verified users only
+    token = create_access_token({"sub": user.email, "role": user.role, "id": user.emp_id})
     
     return {
-        "message": "Login successful",
+        "access_token": token,
+        "token_type": "bearer",
         "user": {
             "emp_id": user.emp_id,
             "role": user.role,
@@ -143,23 +168,37 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     }
 @app.patch("/admin/requests/{request_id}/approve")
 async def approve_request(request_id: int, db: AsyncSession = Depends(get_db)):
-    # Look for the request
+    # 1. Update Request Status
     query = select(Requests).where(Requests.request_id == request_id)
     result = await db.execute(query)
-    db_request = result.scalar_one_or_none()
+    req = result.scalar_one_or_none()
 
-    if not db_request:
+    if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    # Update status to Approved
-    db_request.status = "Approved"
+    req.status = "Approved"
     
+    # 2. Fetch User email for notification
+    user_query = select(Users.email).where(Users.emp_id == req.requestee_id)
+    user_res = await db.execute(user_query)
+    user_email = user_res.scalar()
+
     try:
         await db.commit()
-        return {"message": f"Request {request_id} approved!"}
+        
+        # 3. Trigger Email Notification
+        ses_client.send_email(
+            Source="mail@keylocker.in",
+            Destination={"ToAddresses": [user_email]},
+            Message={
+                "Subject": {"Data": "KeyLocker: Request Approved!"},
+                "Body": {"Html": {"Data": f"Your request for <b>{req.api_name}</b> has been approved. Log in to view your key."}}
+            }
+        )
+        return {"message": "Approved and user notified via email"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 @app.post("/admin/keys")
 async def admin_add_key(key_data: KeyReg, db: AsyncSession = Depends(get_db)):
     new_api = APIkeys(
@@ -174,9 +213,25 @@ async def admin_add_key(key_data: KeyReg, db: AsyncSession = Depends(get_db)):
 # Admin: View all requests currently in 'Pending' status
 @app.get("/admin/requests")
 async def get_all_requests(db: AsyncSession = Depends(get_db)):
-    query = select(Requests).where(Requests.status == "Pending")
+    # Join Requests with Users to get the requester's name
+    query = select(
+        Requests.request_id,
+        Requests.api_name,
+        Requests.requestee_id,
+        Users.name.label("user_name")
+    ).join(Users, Requests.requestee_id == Users.emp_id).where(Requests.status == "Pending")
+    
     result = await db.execute(query)
-    return result.scalars().all()
+    # Convert result to a list of dictionaries for easy JSON serialization
+    requests = result.all()
+    return [
+        {
+            "request_id": r.request_id,
+            "api_name": r.api_name,
+            "requestee_id": r.requestee_id,
+            "user_name": r.user_name
+        } for r in requests
+    ]
 
 # User: See names of APIs available to request (Hides the actual keys)
 @app.get("/user/available-apis")
@@ -213,7 +268,120 @@ async def get_user_approved_keys(user_id: int, db: AsyncSession = Depends(get_db
     return [{"api_name": k[0], "api_key": k[1]} for k in keys]
 @app.get("/user/my-requests/{user_id}")
 async def get_user_requests(user_id: int, db: AsyncSession = Depends(get_db)):
-    # Fetch names of all APIs this user has already interacted with
-    query = select(Requests.api_name).where(Requests.requestee_id == user_id)
+    # Only return API names where the status is currently 'Pending'
+    query = select(Requests.api_name).where(
+        Requests.requestee_id == user_id,
+        Requests.status == "Pending"
+    )
     result = await db.execute(query)
     return result.scalars().all()
+@app.patch("/user/requests/consume")
+async def consume_request(api_name: str, user_id: int, db: AsyncSession = Depends(get_db)):
+    # Find the specific approved request
+    query = select(Requests).where(
+        Requests.api_name == api_name,
+        Requests.requestee_id == user_id,
+        Requests.status == "Approved"
+    )
+    result = await db.execute(query)
+    db_request = result.scalar_one_or_none()
+
+    if not db_request:
+        # If this hits, it means the API name or User ID didn't match an 'Approved' record
+        raise HTTPException(status_code=404, detail="Approved request not found")
+
+    db_request.status = "Consumed"
+    
+    try:
+        await db.commit()
+        return {"message": "Key burned successfully"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+@app.patch("/admin/requests/{request_id}/reject")
+async def reject_request(request_id: int, reason: str, db: AsyncSession = Depends(get_db)):
+    # 1. Fetch the request
+    query = select(Requests).where(Requests.request_id == request_id)
+    result = await db.execute(query)
+    req = result.scalar_one_or_none()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    # 2. Update status to Rejected
+    req.status = "Rejected"
+    
+    # 3. Get user email for notification
+    user_query = select(Users.email).where(Users.emp_id == req.requestee_id)
+    user_res = await db.execute(user_query)
+    user_email = user_res.scalar()
+
+    try:
+        await db.commit()
+        
+        # 4. Trigger Rejection Email via AWS SES
+        ses_client.send_email(
+            Source="mail@keylocker.in",
+            Destination={"ToAddresses": [user_email]},
+            Message={
+                "Subject": {"Data": "KeyLocker: Request Denied"},
+                "Body": {"Html": {"Data": f"""
+                    <h3>Request Update</h3>
+                    <p>Your request for <b>{req.api_name}</b> was rejected.</p>
+                    <p><b>Reason:</b> {reason}</p>
+                    <p>You can try requesting again if you address the reason above.</p>
+                """}}
+            }
+        )
+        return {"message": "Rejected and user notified."}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/user/stats/{user_id}")
+async def get_user_stats(user_id: int, db: AsyncSession = Depends(get_db)):
+    # Count Approved keys
+    approved_query = select(Requests).where(Requests.requestee_id == user_id, Requests.status == "Approved")
+    # Count Consumed keys
+    consumed_query = select(Requests).where(Requests.requestee_id == user_id, Requests.status == "Consumed")
+    
+    approved_res = await db.execute(approved_query)
+    consumed_res = await db.execute(consumed_query)
+    
+    return {
+        "approved": len(approved_res.scalars().all()),
+        "consumed": len(consumed_res.scalars().all())
+    }
+@app.post("/forgot-password")
+async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
+    query = select(Users).where(Users.email == email)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    token = serializer.dumps(email, salt='password-reset')
+    reset_link = f"http://127.0.0.1:8000/reset-password/{token}"
+
+    ses_client.send_email(
+        Source="mail@keylocker.in",
+        Destination={"ToAddresses": [email]},
+        Message={
+            "Subject": {"Data": "KeyLocker: Reset Your Password"},
+            "Body": {"Html": {"Data": f"Click <a href='{reset_link}'>here</a> to reset your password. Valid for 10 mins."}}
+        }
+    )
+    return {"message": "Reset link sent to your email."}
+@app.post("/reset-password-confirm")
+async def reset_password_confirm(token: str, new_password: str, db: AsyncSession = Depends(get_db)):
+    try:
+        email = serializer.loads(token, salt='password-reset', max_age=600)
+        hashed_pwd = PasswordHasher.hash_password(new_password)
+        
+        query = update(Users).where(Users.email == email).values(password=hashed_pwd)
+        await db.execute(query)
+        await db.commit()
+        return {"message": "Password updated successfully!"}
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or expired token.")
