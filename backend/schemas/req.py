@@ -2,6 +2,7 @@ from pydantic import BaseModel,ConfigDict
 
 class ReqReg(BaseModel):
     api_name : str
+    requestee_id: int
     status : str = "Pending"
 
 class ReqResponse(BaseModel):
