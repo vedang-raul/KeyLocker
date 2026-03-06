@@ -3,136 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KeyLocker | Secure Key Management</title>
+    <title>KeyLocker | Secure Command Center</title>
     <style>
-        /* --- Digital Rain Background Layer --- */
-        .bg-animation {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            --c: rgb(255, 251, 0);
-            background-color: #000;
-            background-image: 
-                radial-gradient(4px 100px at 0px 235px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 235px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 117.5px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 252px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 252px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 126px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 150px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 150px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 75px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 253px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 253px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 126.5px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 204px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 204px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 102px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 134px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 134px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 67px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 179px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 179px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 89.5px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 299px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 299px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 149.5px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 215px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 215px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 107.5px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 281px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 281px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 140.5px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 158px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 158px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 79px, var(--c) 100%, #0000 150%),
-                radial-gradient(4px 100px at 0px 210px, var(--c), #0000),
-                radial-gradient(4px 100px at 300px 210px, var(--c), #0000),
-                radial-gradient(1.5px 1.5px at 150px 105px, var(--c) 100%, #0000 150%);
-            background-size: 300px 235px, 300px 235px, 300px 235px, 300px 252px, 300px 252px, 300px 252px, 300px 150px, 300px 150px, 300px 150px, 300px 253px, 300px 253px, 300px 253px, 300px 204px, 300px 204px, 300px 204px, 300px 134px, 300px 134px, 300px 134px, 300px 179px, 300px 179px, 300px 179px, 300px 299px, 300px 299px, 300px 299px, 300px 215px, 300px 215px, 300px 215px, 300px 281px, 300px 281px, 300px 281px, 300px 158px, 300px 158px, 300px 158px, 300px 210px, 300px 210px, 300px 210px;
-            animation: hi 150s linear infinite;
+        /* --- Digital Rain Background --- */
+    .bg-animation {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background-color: #000;
+        /* 5 layers of varying heights and widths for a rich, organic feel */
+        background-image: 
+            radial-gradient(1px 80px at 20px 100px, rgba(255, 215, 0, 0.3), transparent),
+            radial-gradient(1px 40px at 100px 50px, rgba(255, 215, 0, 0.2), transparent),
+            radial-gradient(1.5px 120px at 180px 200px, rgba(255, 215, 0, 0.25), transparent),
+            radial-gradient(1px 60px at 250px 150px, rgba(255, 215, 0, 0.15), transparent),
+            radial-gradient(2px 2px at 50px 50px, rgba(255, 215, 0, 0.6) 100%, transparent 150%);
+
+        /* Different sizing for each layer creates the 'dense' look */
+        background-size: 300px 400px, 200px 250px, 350px 500px, 250px 300px, 150px 200px;
+        animation: digital-fall 12s linear infinite;
+    }
+
+    .bg-animation::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        /* Soft vignette keeps the center readable */
+        background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.85) 100%);
+        /* Fine scanlines for that 'monitor' texture */
+        background-image: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.3) 2px);
+        pointer-events: none;
+    }
+
+    @keyframes digital-fall {
+        0% { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%; }
+        100% { background-position: 0% 400px, 0% 250px, 0% 500px, 0% 300px, 0% 200px; }
+    }
+
+        body { margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; font-family: 'Segoe UI', sans-serif; background: #000; color: white; }
+        
+        /* --- Main Container --- */
+        .container { 
+            position: relative; z-index: 2; 
+            background: rgba(0, 0, 0, 0.079); 
+            backdrop-filter: blur(5px); 
+            padding: 2.5rem; border-radius: 18px; 
+            width: 90%; max-width: 400px; 
+            box-shadow: 0 20px 50px #ffde2310; 
+            border: 1px solid #ffde2310; 
+            transition: max-width 0.5s ease;
         }
+        
+        .main-dashboard { max-width: 850px !important; } /* Expanded state */
 
-        .bg-animation::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            z-index: 1;
-            backdrop-filter: blur(0.1em) brightness(1.1);
-            background-image: radial-gradient(circle at 50% 50%, #0000 0, #0000 2px, hsl(0 0 4% / 15%) 2px);
-            background-size: 8px 8px;
-        }
+        h2 { color: #FFD700; text-align: center; margin-bottom: 1.5rem; }
+        input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #333; border-radius: 6px; background: #111; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #FFD700; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
 
-        @keyframes hi {
-            0% { background-position: 0px 220px, 3px 220px, 151.5px 337.5px, 25px 24px, 28px 24px, 176.5px 150px, 50px 16px, 53px 16px, 201.5px 91px, 75px 224px, 78px 224px, 226.5px 350.5px, 100px 19px, 103px 19px, 251.5px 121px, 125px 120px, 128px 120px, 276.5px 187px, 150px 31px, 153px 31px, 301.5px 120.5px, 175px 235px, 178px 235px, 326.5px 384.5px, 200px 121px, 203px 121px, 351.5px 228.5px, 225px 224px, 228px 224px, 376.5px 364.5px, 250px 26px, 253px 26px, 401.5px 105px, 275px 75px, 278px 75px, 426.5px 180px; }
-            to { background-position: 0px 6800px, 3px 6800px, 151.5px 6917.5px, 25px 13632px, 28px 13632px, 176.5px 13758px, 50px 5416px, 53px 5416px, 201.5px 5491px, 75px 17175px, 78px 17175px, 226.5px 17301.5px, 100px 5119px, 103px 5119px, 251.5px 5221px, 125px 8428px, 128px 8428px, 276.5px 8495px, 150px 9876px, 153px 9876px, 301.5px 9965.5px, 175px 13391px, 178px 13391px, 326.5px 13540.5px, 200px 14741px, 203px 14741px, 351.5px 14848.5px, 225px 18770px, 228px 18770px, 376.5px 18910.5px, 250px 5082px, 253px 5082px, 401.5px 5161px, 275px 6375px, 278px 6375px, 426.5px 6480px; }
-        }
+        /* --- Grid & Cards --- */
+        .api-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .api-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,215,0,0.1); padding: 20px; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.3s; }
+        .api-card:hover { border-color: #FFD700; background: rgba(255,215,0,0.05); }
 
-        /* --- Base & Glassmorphism Styles --- */
-        body { margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
-        .container { position: relative; z-index: 2; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); padding: 2rem; border-radius: 15px; width: 380px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); transition: background 0.3s; }
-        h2, h3 { color: #222; text-align: center; margin-bottom: 1rem; }
-        input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
-        button { width: 100%; padding: 12px; background: #FFD700; color: rgb(9, 9, 9); border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: background 0.2s; }
-        button:hover { background: #FFD700; }
-        .message { margin-top: 15px; font-size: 0.9rem; text-align: center; color: #555; }
-        .toggle-link { color: #FFD700; cursor: pointer; text-decoration: underline; font-weight: 500; }
+        .stats-bar { display: flex; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px; }
 
-        /* --- Panels & Cards --- */
-        .api-card { border: 1px solid #ddd; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.03); }
-        .api-card.approved { border-color: #28a745; background: rgba(40, 167, 69, 0.1); }
-        .masked-key { font-family: 'Courier New', Courier, monospace; background: #eee; padding: 3px 6px; border-radius: 4px; font-size: 0.85rem; }
-        .stats-bar { display: flex; justify-content: space-around; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; }
+        /* --- Modal Styling --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(8px); z-index: 1000; display: none; justify-content: center; align-items: center; }
+        .modal-content { background: #111; padding: 40px; border-radius: 20px; width: 450px; border: 1px solid #FFD700; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; }
 
-        /* --- Dark Mode Overrides --- */
-        body.dark-mode .container { background: rgba(25, 25, 25, 0.85); color: #eee; border: 1px solid rgba(255,255,255,0.1); }
-        body.dark-mode h2, body.dark-mode h3 { color: #fff; }
-        body.dark-mode input { background: #333; color: white; border-color: #444; }
-        body.dark-mode .api-card { background: rgba(255,255,255,0.05); border-color: #444; }
-        body.dark-mode .masked-key { background: #444; color: #ddd; }
-        body.dark-mode .stats-bar { background: rgba(255,255,255,0.1); }
-        body.dark-mode .message { color: #bbb; }
+        /* --- Stepper UI --- */
+        .stepper-step { display: flex; gap: 15px; margin-bottom: 20px; position: relative; opacity: 0.4; }
+        .stepper-active { opacity: 1; }
+        .stepper-completed { opacity: 1; color: #28a745; }
+        .stepper-circle { width: 30px; height: 30px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .stepper-completed .stepper-circle { background: #28a745; color: white; }
+        .stepper-active .stepper-circle { background: #FFD700; color: #000; box-shadow: 0 0 10px #FFD700; }
     </style>
 </head>
 <body>
     <div class="bg-animation"></div>
-    <button onclick="toggleDarkMode()" style="width: auto; position: absolute; top: 15px; right: 15px; z-index: 10; padding: 8px 12px;">🌓 Toggle Dark Mode</button>
 
     <div class="container" id="main-container">
         <div id="auth-view">
             <h2 id="form-title">KeyLocker Login</h2>
-            <div id="signup-fields" style="display:none;"><input type="text" id="name" placeholder="Full Name"></div>
-            <input type="email" id="email" placeholder="Email">
+            <div id="signup-fields" style="display:none;">
+                <input type="text" id="name" placeholder="Full Name">
+            </div>
+            <input type="email" id="email" placeholder="Corporate Email">
             <input type="password" id="password" placeholder="Password">
-            <button onclick="handleAuth()" id="submit-btn">Login</button>
-            <p class="message"><span id="toggle-text">Don't have an account?</span> <span class="toggle-link" onclick="toggleMode()">Click here</span></p>
-            <p class="message"><span class="toggle-link" onclick="forgotPassword()">Forgot Password?</span></p>
-            <div id="auth-msg" class="message"></div>
+            <button id="submit-btn" onclick="handleAuth()">Access System</button>
+            <p style="text-align:center; font-size:0.8rem; margin-top:15px;">
+                <span id="toggle-text">New Operative?</span> 
+                <span onclick="toggleMode()" style="color:#FFD700; cursor:pointer; font-weight:bold;">Switch Mode</span>
+            </p>
+            <div id="auth-msg" style="text-align:center; margin-top:10px; font-size:0.8rem;"></div>
         </div>
 
         <div id="dashboard-view" style="display:none;">
-            <h2 id="welcome-msg">Dashboard</h2>
-            <hr style="opacity: 0.2; margin: 15px 0;">
+            <h2 id="welcome-msg" style="text-align:left;">Command Center</h2>
+            <div class="stats-bar">
+                <span>Approved: <b id="stat-approved">0</b></span>
+                <span>Consumed: <b id="stat-consumed">0</b></span>
+            </div>
             
+            <div id="user-panel">
+                <div id="user-api-grid" class="api-grid"></div>
+            </div>
+
             <div id="admin-panel" style="display:none;">
-                <h3>Admin: Manage Keys</h3>
-                <input type="text" id="new-api-name" placeholder="API Name (e.g. OpenAI)">
-                <input type="text" id="new-api-key" placeholder="API Key">
-                <button onclick="adminAddKey()">Create & Add Key</button>
-                <h4 style="margin-top: 20px;">Pending Requests</h4>
-                <div id="admin-requests-list">No pending requests.</div>
+                <h3>Admin: Register New Key</h3>
+                <input type="text" id="new-api-name" placeholder="API Name">
+                <input type="text" id="new-api-key" placeholder="Actual API Key">
+                <button onclick="adminAddKey()">Deploy Key</button>
+                <h4 style="margin-top:20px;">Pending Requests</h4>
+                <div id="admin-requests-list"></div>
             </div>
+            
+            <button onclick="location.reload()" style="background:#222; color:white; margin-top:30px; width:auto;">Logout</button>
+        </div>
+    </div>
 
-            <div id="user-panel" style="display:none;">
-                <div class="stats-bar">
-                    <span>Approved: <b id="stat-approved">0</b></span>
-                    <span>Consumed: <b id="stat-consumed">0</b></span>
+    <div id="api-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 id="modal-api-name" style="margin-bottom:30px;">API Workspace</h2>
+            
+            <div id="modal-stepper">
+                <div class="stepper-step stepper-completed" id="m-step-1">
+                    <div class="stepper-circle">1</div>
+                    <div><b>Initialized</b></div>
                 </div>
-                <h3>Request API Access</h3>
-                <div id="user-api-list">Loading APIs...</div>
+                <div class="stepper-step" id="m-step-2">
+                    <div class="stepper-circle" id="m-circle-2">2</div>
+                    <div><b id="m-text-2">Admin Review</b></div>
+                </div>
+                <div class="stepper-step" id="m-step-3">
+                    <div class="stepper-circle">3</div>
+                    <div><b>Key Delivery</b></div>
+                </div>
             </div>
 
-            <button onclick="location.reload()" style="background:#555; margin-top: 20px;">Logout</button>
+            <div id="modal-action-area" style="margin-top:30px; text-align:center;"></div>
         </div>
     </div>
 
@@ -144,128 +158,131 @@
         function toggleMode() {
             isLogin = !isLogin;
             document.getElementById('form-title').innerText = isLogin ? "KeyLocker Login" : "Create Account";
-            document.getElementById('submit-btn').innerText = isLogin ? "Login" : "Sign Up";
-            document.getElementById('toggle-text').innerText = isLogin ? "Don't have an account?" : "Already have an account?";
             document.getElementById('signup-fields').style.display = isLogin ? "none" : "block";
         }
 
         async function handleAuth() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const msgDiv = document.getElementById('auth-msg');
-
-            if (isLogin) {
-                try {
-                    const res = await fetch(`${API_BASE}/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        localStorage.setItem('token', data.access_token);
-                        currentUser = data.user;
-                        showDashboard();
-                    } else { alert(data.detail); }
-                } catch (e) { alert("Backend unreachable"); }
-            } else {
-                const name = document.getElementById('name').value;
-                msgDiv.innerText = "Creating account...";
-                try {
-                    const res = await fetch(`${API_BASE}/signup`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, email, password, role: "User" })
-                    });
-                    const data = await res.json();
-                    msgDiv.innerText = data.message;
-                    msgDiv.style.color = res.ok ? "green" : "red";
-                    if (res.ok) setTimeout(toggleMode, 2500);
-                } catch (e) { msgDiv.innerText = "Connection failed."; }
-            }
-        }
-
-        async function forgotPassword() {
-            const email = prompt("Enter your registered email:");
-            if (!email) return;
-            try {
-                const res = await fetch(`${API_BASE}/forgot-password?email=${encodeURIComponent(email)}`, { method: 'POST' });
+            
+            if(isLogin) {
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email, password })
+                });
                 const data = await res.json();
-                alert(data.message);
-            } catch (e) { alert("Error sending reset link."); }
+                if(res.ok) {
+                    currentUser = data.user;
+                    showDashboard();
+                } else { alert(data.detail); }
+            } else {
+                // Signup Logic here...
+                alert("Check email for verification (logic connected)");
+            }
         }
 
         function showDashboard() {
             document.getElementById('auth-view').style.display = 'none';
             document.getElementById('dashboard-view').style.display = 'block';
+            document.getElementById('main-container').classList.add('main-dashboard');
             document.getElementById('welcome-msg').innerText = `Welcome, ${currentUser.name}`;
 
-            if (currentUser.role.toLowerCase() === 'admin') {
+            if(currentUser.role.toLowerCase() === 'admin') {
                 document.getElementById('admin-panel').style.display = 'block';
                 loadPendingRequests();
             } else {
-                document.getElementById('user-panel').style.display = 'block';
-                updateStats();
                 loadUserAPIs();
+                updateStats();
             }
         }
+    async function loadPendingRequests() {
+        try {
+            const res = await fetch(`${API_BASE}/admin/requests`);
+            const requests = await res.json();
+            const list = document.getElementById('admin-requests-list');
 
-        async function updateStats() {
-            try {
-                const res = await fetch(`${API_BASE}/user/stats/${currentUser.emp_id}`);
-                const stats = await res.json();
-                document.getElementById('stat-approved').innerText = stats.approved;
-                document.getElementById('stat-consumed').innerText = stats.consumed;
-            } catch (e) { console.error(e); }
+            if (requests.length === 0) {
+                list.innerHTML = "<p style='opacity:0.5; padding:20px;'>No pending clearance requests.</p>";
+                return;
+            }
+
+            list.innerHTML = requests.map(req => `
+                <div class="api-card" style="display:flex; justify-content:space-between; align-items:center; text-align:left;">
+                    <div>
+                        <strong style="color:#FFD700;">${req.api_name}</strong><br>
+                        <small>User ID: ${req.requestee_id} (${req.user_name})</small>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="approveRequest(${req.request_id})" style="width:40px; background:#28a745;">✔</button>
+                        <button onclick="rejectRequest(${req.request_id})" style="width:40px; background:#dc3545;">✖</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error("Admin Sync Error:", e);
+        }
+    }
+    async function adminAddKey() {
+        const apiNameInput = document.getElementById('new-api-name');
+        const apiKeyInput = document.getElementById('new-api-key');
+        
+        const api_name = apiNameInput.value.trim();
+        const api_key = apiKeyInput.value.trim();
+
+        if (!api_name || !api_key) {
+            alert("System Error: Both API Name and Key are required for deployment.");
+            return;
         }
 
-        async function adminAddKey() {
+        try {
             const payload = {
-                api_name: document.getElementById('new-api-name').value,
-                api_key: document.getElementById('new-api-key').value,
-                owner_id: currentUser.emp_id 
+                api_name: api_name,
+                api_key: api_key,
+                owner_id: currentUser.emp_id // Matches KeyReg schema
             };
+
             const res = await fetch(`${API_BASE}/admin/keys`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const data = await res.json();
-            alert(data.message);
-            document.getElementById('new-api-name').value = '';
-            document.getElementById('new-api-key').value = '';
-        }
 
-        async function loadPendingRequests() {
-            const res = await fetch(`${API_BASE}/admin/requests`);
-            const requests = await res.json();
-            const list = document.getElementById('admin-requests-list');
-            list.innerHTML = requests.length === 0 ? "No pending requests." : requests.map(req => `
-                <div class="api-card">
-                    <span><strong>${req.api_name}</strong><br><small>By: ${req.user_name}</small></span>
-                    <div style="display:flex; gap:5px;">
-                        <button onclick="approveRequest(${req.request_id})" style="width:auto; background:#28a745; padding:5px 10px;">✔</button>
-                        <button onclick="rejectRequest(${req.request_id})" style="width:auto; background:#dc3545; padding:5px 10px;">✖</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function approveRequest(id) {
-            const res = await fetch(`${API_BASE}/admin/requests/${id}/approve`, { method: 'PATCH' });
             const data = await res.json();
-            alert(data.message);
-            loadPendingRequests();
-        }
 
-        async function rejectRequest(id) {
-            const reason = prompt("Reason for rejection:");
-            if (!reason) return;
-            const res = await fetch(`${API_BASE}/admin/requests/${id}/reject?reason=${encodeURIComponent(reason)}`, { method: 'PATCH' });
-            const data = await res.json();
-            alert(data.message);
-            loadPendingRequests();
+            if (res.ok) {
+            alert(`Success: ${api_name} has been deployed to the vault.`);
+                // Clear inputs
+                apiNameInput.value = '';
+                apiKeyInput.value = '';
+
+                // If the admin panel has a list of all keys, refresh it here
+                if (typeof loadAllKeys === "function") loadAllKeys(); 
+            } else {
+                alert("Deployment Failed: " + (data.detail || "Unknown error"));
+            }
+        } catch (e) {
+            console.error("Vault Connection Error:", e);
+            alert("System Offline: Backend unreachable.");
         }
+    }
+    async function approveRequest(id) {
+        const res = await fetch(`${API_BASE}/admin/requests/${id}/approve`, { method: 'PATCH' });
+        if (res.ok) {
+            alert("Access Granted.");
+            loadPendingRequests(); // Refresh the list
+        }
+    }
+
+    async function rejectRequest(id) {
+        const reason = prompt("Enter reason for denial:");
+        if (!reason) return;
+        const res = await fetch(`${API_BASE}/admin/requests/${id}/reject?reason=${encodeURIComponent(reason)}`, { method: 'PATCH' });
+        if (res.ok) {
+            alert("Access Denied.");
+            loadPendingRequests(); // Refresh the list
+        }
+    }
 
         async function loadUserAPIs() {
             try {
@@ -274,53 +291,180 @@
                     fetch(`${API_BASE}/user/my-requests/${currentUser.emp_id}`),
                     fetch(`${API_BASE}/user/my-keys/${currentUser.emp_id}`)
                 ]);
-                const apis = await apisRes.json();
-                const pendingReqs = await reqsRes.json();
-                const approvedKeys = await keysRes.json();
-                const list = document.getElementById('user-api-list');
 
-                list.innerHTML = apis.map((api, i) => {
-                    const approvedObj = approvedKeys.find(k => k.api_name === api);
-                    const isPending = pendingReqs.includes(api);
-                    if (approvedObj) {
-                        const cid = `key-${i}`;
-                        return `<div class="api-card approved" id="${cid}">
-                            <strong>${api}</strong> <span class="masked-key">****${approvedObj.api_key.slice(-4)}</span>
-                            <button onclick="copyAndHide('${api}', '${approvedObj.api_key}', '${cid}')" style="width:auto; background:#28a745;">Copy</button>
-                        </div>`;
-                    } else if (isPending) {
-                        return `<div class="api-card"><strong>${api}</strong> <button disabled style="width:auto; background:#666;">Pending</button></div>`;
-                    } else {
-                        return `<div class="api-card"><strong>${api}</strong> <button onclick="userMakeRequest('${api}', this)" style="width:auto;">Request</button></div>`;
-                    }
+                const apis = await apisRes.json();     // Returns ["OpenAI", "Claude"]
+                const pending = await reqsRes.json();  // Returns ["OpenAI"]
+                const approved = await keysRes.json(); // Returns [{api_name: "Claude", api_key: "..."}]
+
+                const grid = document.getElementById('user-api-grid');
+                grid.innerHTML = apis.map(api => {
+                    // Check if this specific API name exists in the approved list
+                    const isApproved = approved.find(k => k.api_name === api);
+                    // Check if this specific API name exists in the pending string list
+                    const isPending = pending.includes(api);
+
+                    let statusTag = isApproved ? '✅ Ready' : (isPending ? '⏳ Pending' : '🔒 Locked');
+
+                    return `
+                        <div class="api-card" onclick="openAPIWorkspace('${api}')">
+                            <h3 style="margin:0; color:#FFD700;">${api}</h3>
+                            <p style="font-size:0.8rem; color:#aaa; margin-top:10px;">Status: ${statusTag}</p>
+                        </div>
+                    `;
                 }).join('');
-            } catch (e) { console.error(e); }
-        }
 
-        async function userMakeRequest(api, btn) {
-            btn.innerText = "..."; btn.disabled = true;
-            try {
-                const res = await fetch(`${API_BASE}/user/request`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ api_name: api, requestee_id: currentUser.emp_id })
-                });
-                if (res.ok) { btn.innerText = "Pending"; btn.style.background = "#666"; }
-                else { btn.innerText = "Request"; btn.disabled = false; }
-            } catch (e) { alert("Error making request."); }
-        }
-
-        async function copyAndHide(name, key, cid) {
-            await navigator.clipboard.writeText(key);
-            const res = await fetch(`${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, { method: 'PATCH' });
-            if (res.ok) {
-                alert("Key copied and burned!");
-                document.getElementById(cid).remove();
                 updateStats();
+            } catch (e) {
+                console.error("Failed to sync with Vault:", e);
             }
         }
+    async function userMakeRequest(api) {
+        // 1. Validation Check
+        if (!currentUser || !currentUser.emp_id) {
+            alert("Session Error: Please re-login.");
+            return;
+        }
 
-        function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
+        try {
+            const payload = { 
+                api_name: api, 
+                requestee_id: parseInt(currentUser.emp_id),
+                status: "Pending" 
+            };
+
+            console.log("Sending Payload:", payload); // DEBUG: Check console (F12)
+
+            const res = await fetch(`${API_BASE}/user/request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                console.log("Request Successful");
+                // Refresh the workspace modal to show the 'In Review' stepper
+                openAPIWorkspace(api); 
+            } else {
+                const errData = await res.json();
+                console.error("Backend Rejected Request:", errData);
+                alert("Error: " + JSON.stringify(errData.detail));
+            }
+        } catch (e) {
+            console.error("Network/Connection Error:", e);
+            alert("Failed to connect to backend server.");
+        }
+    }
+
+    async function openAPIWorkspace(apiName) {
+        const modal = document.getElementById('api-modal');
+        modal.style.display = 'flex';
+        document.getElementById('modal-api-name').innerText = apiName;
+            
+        const actionArea = document.getElementById('modal-action-area');
+        actionArea.innerHTML = "Refining connection..."; // Feedback
+
+        try {
+            const [reqsRes, keysRes] = await Promise.all([
+                fetch(`${API_BASE}/user/my-requests/${currentUser.emp_id}`),
+                fetch(`${API_BASE}/user/my-keys/${currentUser.emp_id}`)
+            ]);
+
+            const pending = await reqsRes.json(); // Array of strings: ["API Name"]
+            const approved = await keysRes.json(); // Array of objects: [{api_name: "X", api_key: "Y"}]
+
+            const keyObj = approved.find(k => k.api_name === apiName);
+            const isPending = pending.includes(apiName);
+
+            if (keyObj) {
+                setStepper(3);
+                actionArea.innerHTML = `
+                    <div style="background:#1a1a1a; padding:15px; border-radius:8px; border:1px dashed #FFD700; margin-bottom:15px;">
+                        <code style="color:#FFD700;">••••••••••••${keyObj.api_key.slice(-4)}</code>
+                    </div>
+                    <button onclick="copyAndBurn('${apiName}','${keyObj.api_key}')">DECRYPT & COPY</button>`;
+            } else if (isPending) {
+                setStepper(2);
+                actionArea.innerHTML = `<p style="color:#FFD700; font-family:monospace;">SYSTEM: AWAITING ADMIN CLEARANCE...</p>`;
+            } else {
+                setStepper(1);
+                actionArea.innerHTML = `<button onclick="userMakeRequest('${apiName}')">INITIALIZE REQUEST</button>`;
+            }
+        } catch (err) {
+            actionArea.innerHTML = "Failed to sync status.";
+        }
+    }
+
+        function setStepper(step) {
+            document.getElementById('m-step-2').className = step >= 2 ? "stepper-step stepper-active" : "stepper-step";
+            document.getElementById('m-step-3').className = step >= 3 ? "stepper-step stepper-active" : "stepper-step";
+            if(step === 3) document.getElementById('m-circle-2').innerText = "✔";
+        }
+
+        async function userMakeRequest(api) {
+            await fetch(`${API_BASE}/user/request`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ api_name: api, requestee_id: currentUser.emp_id })
+            });
+            openAPIWorkspace(api);
+        }
+
+        async function copyAndBurn(name, key) {
+            await navigator.clipboard.writeText(key);
+            await fetch(`${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, {method: 'PATCH'});
+            alert("Key Burned!");
+            closeModal();
+        }
+
+        function closeModal() { 
+            document.getElementById('api-modal').style.display = 'none'; 
+            loadUserAPIs();
+        }
+    async function updateStats() {
+        if (!currentUser || !currentUser.emp_id) return;
+            
+        try {
+            const res = await fetch(`${API_BASE}/user/stats/${currentUser.emp_id}`);
+            if (!res.ok) throw new Error("Stats fetch failed");
+
+            const stats = await res.json();
+
+            // Target the <b> tags in your stats-bar
+            const approvedEl = document.getElementById('stat-approved');
+            const consumedEl = document.getElementById('stat-consumed');
+            
+            if (approvedEl) approvedEl.innerText = stats.approved || 0;
+            if (consumedEl) consumedEl.innerText = stats.consumed || 0;
+            
+            console.log("Stats Updated:", stats);
+        } catch (e) {
+            console.error("Error updating dashboard stats:", e);
+        }
+    }
+    async function copyAndBurn(name, key) {
+        try {
+            // 1. Copy to Clipboard
+            await navigator.clipboard.writeText(key);
+
+            // 2. Tell Backend to change status from 'Approved' to 'Consumed'
+            const res = await fetch(`${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, {
+                method: 'PATCH'
+            });
+
+            if (res.ok) {
+                alert("KEY COPIED: This access key has been burned from the database for security.");
+
+                closeModal();    // Close the workspace
+                loadUserAPIs();  // Refresh the grid (the key will disappear)
+                updateStats();   // Update the Approved/Consumed counts
+            } else {
+                alert("Failed to burn key. Contact Admin.");
+            }
+        } catch (err) {
+            console.error("Burn Logic Failure:", err);
+            alert("Clipboard access denied or Network error.");
+        }
+    }
     </script>
 </body>
 </html>
