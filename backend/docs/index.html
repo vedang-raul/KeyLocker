@@ -120,6 +120,11 @@
                 <button onclick="adminAddKey()">Deploy Key</button>
                 <h4 style="margin-top:20px;">Pending Requests</h4>
                 <div id="admin-requests-list"></div>
+                <div id="admin-inventory-section" style="margin-top: 40px; border-top: 1px solid rgba(255,215,0,0.1); padding-top: 20px;">
+                        <h3>Active Vault Inventory</h3>
+                        <div id="admin-keys-list" class="api-grid">
+                </div>
+                </div>
             </div>
             
             <button onclick="location.reload()" style="background:#222; color:white; margin-top:30px; width:auto;">Logout</button>
@@ -194,6 +199,11 @@
             } else {
                 loadUserAPIs();
                 updateStats();
+            }
+            if (currentUser.role.toLowerCase() === 'admin') {
+                document.getElementById('admin-panel').style.display = 'block';
+                    loadPendingRequests();
+                    loadAllKeys(); // Add this line here!
             }
         }
     async function loadPendingRequests() {
@@ -463,6 +473,52 @@
         } catch (err) {
             console.error("Burn Logic Failure:", err);
             alert("Clipboard access denied or Network error.");
+        }
+    }
+    async function loadAllKeys() {
+        try {
+            const res = await fetch(`${API_BASE}/user/available-apis`);
+            const apis = await res.json();
+            const list = document.getElementById('admin-keys-list');
+
+            if (apis.length === 0) {
+                list.innerHTML = "<p style='opacity:0.5; grid-column: 1/-1; text-align:center;'>Vault empty. No active keys found.</p>";
+                return;
+            }
+
+            // Mapping to the exact same card structure as the User side
+            list.innerHTML = apis.map(api => `
+                <div class="api-card">
+                    <h3 style="margin:0; color:#FFD700; font-size: 1.1rem;">${api}</h3>
+                    <p style="font-size:0.7rem; color:#aaa; margin: 10px 0 15px 0;">SYSTEM ACTIVE</p>
+                    <button onclick="deleteKey('${api}')" 
+                            style="background:#dc3545; color:white; font-size:0.75rem; padding: 8px;">
+                        REVOKE ACCESS
+                    </button>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error("Vault Sync Error:", e);
+        }
+    }
+
+    async function deleteKey(apiName) {
+        if (!confirm(`Are you sure you want to PERMANENTLY delete ${apiName}?`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/admin/keys/${encodeURIComponent(apiName)}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                alert(`${apiName} deleted successfully.`);
+                loadAllKeys(); // Refresh inventory
+                loadUserAPIs(); // Refresh the main grid if visible
+            } else {
+                alert("Failed to delete key.");
+            }
+        } catch (e) {
+            alert("System Error: Could not reach the vault.");
         }
     }
     </script>

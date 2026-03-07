@@ -385,3 +385,16 @@ async def reset_password_confirm(token: str, new_password: str, db: AsyncSession
         return {"message": "Password updated successfully!"}
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid or expired token.")
+
+@app.delete("/admin/keys/{api_name}")
+async def delete_api_key(api_name: str, db: AsyncSession = Depends(get_db)):
+    query = select(APIkeys).where(APIkeys.api_name == api_name)
+    result = await db.execute(query)
+    key = result.scalar_one_or_none()
+
+    if not key:
+        raise HTTPException(status_code=404, detail="API Key not found")
+
+    await db.delete(key)
+    await db.commit()
+    return {"message": f"{api_name} has been purged from the vault."}
