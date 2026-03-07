@@ -69,7 +69,7 @@ async def signup(user_data: UserReg, db: AsyncSession = Depends(get_db)):
     # 2. Hash the password!
     hashed_pwd = PasswordHasher.hash_password(user_data.password)
     token = serializer.dumps(user_data.email, salt='email_confirm')
-    verification_link = f"http://127.0.0.1:8000/verify/{token}"
+    verification_link = f"https://keylocker-1.onrender.com/verify/{token}"
 
     try:
         new_user = Users(
@@ -376,7 +376,7 @@ async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
     token = serializer.dumps(email, salt='password-reset')
-    reset_link = f"http://127.0.0.1:8000/reset-password/{token}"
+    reset_link = f"https://keylocker-1.onrender.com/reset-password/{token}"
 
     ses_client.send_email(
         Source="mail@keylocker.in",
