@@ -7,6 +7,7 @@
     <style>
         /* --- Digital Rain Background --- */
     .bg-animation {
+
         position: fixed;
         inset: 0;
         z-index: -1;
@@ -169,23 +170,52 @@
         async function handleAuth() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const authMsg = document.getElementById('auth-msg');
             
+        // Simple UI Feedback
+            authMsg.innerText = "Processing clearance...";
+            authMsg.style.color = "#FFD700";
+
             if(isLogin) {
-                const res = await fetch(`${API_BASE}/login`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await res.json();
-                if(res.ok) {
-                    currentUser = data.user;
-                    showDashboard();
-                } else { alert(data.detail); }
+                try {
+                    const res = await fetch(`${API_BASE}/login`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    if(res.ok) {
+                        currentUser = data.user;
+                        showDashboard();
+                    } else { 
+                        authMsg.innerText = data.detail;
+                        authMsg.style.color = "#dc3545";
+                    }
+                } catch (e) { authMsg.innerText = "Vault Offline."; }
             } else {
-                // Signup Logic here...
-                alert("Check email for verification (logic connected)");
+        // -    -- REAL SIGNUP LOGIC ---
+                const name = document.getElementById('name').value;
+                const role = "User"; // Default role
+
+                try {
+                    const res = await fetch(`${API_BASE}/signup`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ name, email, password, role })
+                    });
+                    const data = await res.json();
+            
+                    if(res.ok) {
+                        authMsg.innerHTML = `<span style="color:#28a745">Operative Created! Check your email for TWO links: Amazon SES & KeyLocker Activation.</span>`;
+                        // Switch back to login mode so they can enter credentials after verifying
+                        setTimeout(() => { toggleMode(); }, 5000);
+                    } else {
+                        authMsg.innerText = data.detail;
+                        authMsg.style.color = "#dc3545";
+                    }
+                } catch (e) { authMsg.innerText = "Deployment Error."; }
             }
-        }
+        }   
 
         function showDashboard() {
             document.getElementById('auth-view').style.display = 'none';

@@ -87,20 +87,30 @@ async def signup(user_data: UserReg, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
 
     try:
+        # 1. TRIGGER AWS IDENTITY VERIFICATION (The "Gatekeeper")
+        # This sends the official Amazon SES verification email.
+        # The user MUST click this to allow SES to send them ANY further mail.
+        ses_client.verify_email_identity(EmailAddress=user_data.email)
+
+        # 2. SEND KEYLOCKER ACTIVATION EMAIL
+        # This is your app's specific logic.
         ses_client.send_email(
             Source="mail@keylocker.in",
             Destination={"ToAddresses": [user_data.email]},
             Message={
-                "Subject": {"Data": "Activate your KeyLocker Account"},
+                "Subject": {"Data": "Step 2: Activate your KeyLocker Account"},
                 "Body": {
                     "Html": {
                         "Data": f"""
                         <html>
-                            <body>
-                                <h3>Welcome {user_data.name}!</h3>
-                                <p>Please click the link below to verify your email for KeyLocker:</p>
-                                <a href="{verification_link}">Verify My Email</a>
-                                <p>This link will expire in 10 minutes.</p>
+                            <body style="font-family: sans-serif; background: #000; color: #fff; padding: 20px;">
+                                <h3 style="color: #FFD700;">Welcome {user_data.name}!</h3>
+                                <p>You should have received an automated email from <b>Amazon SES</b>. 
+                                Please click that link first to authorize our delivery system.</p>
+                                <hr/>
+                                <p>Once authorized, click the link below to activate your KeyLocker Dashboard:</p>
+                                <a href="{verification_link}" style="color: #FFD700;">VERIFY KEYLOCKER ACCOUNT</a>
+                                <p style="font-size: 0.8rem; color: #666;">This link expires in 10 minutes.</p>
                             </body>
                         </html>
                         """
@@ -108,7 +118,11 @@ async def signup(user_data: UserReg, db: AsyncSession = Depends(get_db)):
                 }
             }
         )
-        return {"message": "User created. Please check your email for verification."}
+        return {"message": "Dual verification initiated. Check your inbox for both Amazon and KeyLocker emails."}
+
+    except Exception as e:
+        print(f"--- MAIL SYSTEM ERROR: {e} ---") 
+        raise HTTPException(status_code=500, detail="Mail system busy. Please try again in a few minutes.")
     except Exception as e:
         # If mail fails, the user IS in the DB, but they didn't get the link.
         print(f"--- MAIL ERROR: {e} ---") 
