@@ -165,8 +165,9 @@
 
         function toggleMode() {
             isLogin = !isLogin;
-            document.getElementById('form-title').innerText = isLogin ? "KeyLocker Login" : "Create Account";
             document.getElementById('signup-fields').style.display = isLogin ? "none" : "block";
+            document.getElementById('submit-btn').innerText = isLogin ? "Access System" : "Create Account";
+            document.getElementById('toggle-text').innerText = isLogin ? "New Operative?" : "Already registered?";
         }
 
         async function handleAuth() {
