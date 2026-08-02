@@ -1,0 +1,1 @@
+- [External backend availability](external-backend-availability.md) — a healthy local frontend preview does not guarantee the configured third-party API is awake or deployed.
