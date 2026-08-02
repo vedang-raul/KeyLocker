@@ -15,7 +15,7 @@ from models.users import Users
 from models.req import Requests 
 from models.keys import APIkeys
 from schemas.users import UserReg,UserLogin
-from core.mail import ses_client
+from core.mail import get_ses_client
 from core.security import PasswordHasher
 from schemas.keys import KeyReg 
 from schemas.req import ReqReg
@@ -90,6 +90,7 @@ async def signup(user_data: UserReg, db: AsyncSession = Depends(get_db)):
         # 1. TRIGGER AWS IDENTITY VERIFICATION (The "Gatekeeper")
         # This sends the official Amazon SES verification email.
         # The user MUST click this to allow SES to send them ANY further mail.
+        ses_client = get_ses_client()
         ses_client.verify_email_identity(EmailAddress=user_data.email)
 
         # 2. SEND KEYLOCKER ACTIVATION EMAIL
@@ -201,7 +202,7 @@ async def approve_request(request_id: int, db: AsyncSession = Depends(get_db)):
         await db.commit()
         
         # 3. Trigger Email Notification
-        ses_client.send_email(
+        get_ses_client().send_email(
             Source="mail@keylocker.in",
             Destination={"ToAddresses": [user_email]},
             Message={
@@ -334,7 +335,7 @@ async def reject_request(request_id: int, reason: str, db: AsyncSession = Depend
         await db.commit()
         
         # 4. Trigger Rejection Email via AWS SES
-        ses_client.send_email(
+        get_ses_client().send_email(
             Source="mail@keylocker.in",
             Destination={"ToAddresses": [user_email]},
             Message={
@@ -378,7 +379,7 @@ async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
     token = serializer.dumps(email, salt='password-reset')
     reset_link = f"https://keylocker-1.onrender.com/reset-password/{token}"
 
-    ses_client.send_email(
+    get_ses_client().send_email(
         Source="mail@keylocker.in",
         Destination={"ToAddresses": [email]},
         Message={

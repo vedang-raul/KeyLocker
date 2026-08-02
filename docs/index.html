@@ -160,8 +160,61 @@
 
     <script>
         const API_BASE = "https://keylocker-1.onrender.com";
+        const MAX_API_RETRIES = 2;
         let currentUser = null;
         let isLogin = true;
+
+        const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function requestJson(path, options = {}) {
+            let lastError;
+
+            for (let attempt = 0; attempt <= MAX_API_RETRIES; attempt++) {
+                try {
+                    const response = await fetch(`${API_BASE}${path}`, options);
+                    const contentType = response.headers.get("content-type") || "";
+                    const body = contentType.includes("application/json")
+                        ? await response.json()
+                        : null;
+
+                    if (response.ok) return body;
+
+                    const error = new Error(
+                        body?.detail || `Backend returned ${response.status}`
+                    );
+                    error.status = response.status;
+
+                    if (response.status >= 500 && attempt < MAX_API_RETRIES) {
+                        await wait(2000 * (attempt + 1));
+                        lastError = error;
+                        continue;
+                    }
+
+                    throw error;
+                } catch (error) {
+                    lastError = error;
+                    if (attempt < MAX_API_RETRIES && !error.status) {
+                        await wait(2000 * (attempt + 1));
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+
+            throw lastError || new Error("The KeyLocker service is unavailable.");
+        }
+
+        function authErrorMessage(error, action) {
+            if (error.status === 400 && action === "signup") {
+                return error.message === "Email already registered"
+                    ? "This email is already registered. Switch to login or use password reset."
+                    : error.message;
+            }
+            if (error.status === 503 || error.status >= 500 || !error.status) {
+                return "The KeyLocker service is temporarily unavailable. Please wait a moment and try again.";
+            }
+            return error.message || "The request could not be completed.";
+        }
 
         function toggleMode() {
             isLogin = !isLogin;
@@ -181,42 +234,35 @@
 
             if(isLogin) {
                 try {
-                    const res = await fetch(`${API_BASE}/login`, {
+                    const data = await requestJson("/login", {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ email, password })
                     });
-                    const data = await res.json();
-                    if(res.ok) {
-                        currentUser = data.user;
-                        showDashboard();
-                    } else { 
-                        authMsg.innerText = data.detail;
-                        authMsg.style.color = "#dc3545";
-                    }
-                } catch (e) { authMsg.innerText = "Vault Offline."; }
+                    currentUser = data.user;
+                    showDashboard();
+                } catch (e) {
+                    authMsg.innerText = authErrorMessage(e, "login");
+                    authMsg.style.color = "#dc3545";
+                }
             } else {
-        // -    -- REAL SIGNUP LOGIC ---
+                // --- REAL SIGNUP LOGIC ---
                 const name = document.getElementById('name').value;
                 const role = "User"; // Default role
 
                 try {
-                    const res = await fetch(`${API_BASE}/signup`, {
+                    await requestJson("/signup", {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ name, email, password, role })
                     });
-                    const data = await res.json();
-            
-                    if(res.ok) {
-                        authMsg.innerHTML = `<span style="color:#28a745">Operative Created! Check your email for TWO links: Amazon SES & KeyLocker Activation.</span>`;
-                        // Switch back to login mode so they can enter credentials after verifying
-                        setTimeout(() => { toggleMode(); }, 5000);
-                    } else {
-                        authMsg.innerText = data.detail;
-                        authMsg.style.color = "#dc3545";
-                    }
-                } catch (e) { authMsg.innerText = "Deployment Error."; }
+                    authMsg.innerHTML = `<span style="color:#28a745">Operative Created! Check your email for TWO links: Amazon SES & KeyLocker Activation.</span>`;
+                    // Switch back to login mode so they can enter credentials after verifying
+                    setTimeout(() => { toggleMode(); }, 5000);
+                } catch (e) {
+                    authMsg.innerText = authErrorMessage(e, "signup");
+                    authMsg.style.color = "#dc3545";
+                }
             }
         }   
 

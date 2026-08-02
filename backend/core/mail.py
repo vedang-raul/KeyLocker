@@ -1,31 +1,34 @@
-from fastapi import HTTPException
-from dotenv import load_dotenv
-from itsdangerous import URLSafeTimedSerializer
-from pydantic import BaseModel, EmailStr
 import boto3
 import os
+from fastapi import HTTPException
+from itsdangerous import URLSafeTimedSerializer
 
-from models.users import Users
 from schemas.users import UserReg
 
+def get_ses_client():
+    """Create the SES client only when an email operation is requested.
 
-load_dotenv()
+    Keeping this out of module import lets health checks and the API service
+    start even when email configuration is temporarily unavailable.
+    """
+    region = os.getenv("AWS_REGION")
+    access_key = os.getenv("AWS_ACCESS_KEY")
+    secret_key = os.getenv("AWS_SECRET_KEY")
 
-AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
-AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
-AWS_REGION = os.getenv("AWS_REGION")
+    if not region or not access_key or not secret_key:
+        raise RuntimeError("Email service is not configured")
 
-ses_client = boto3.client(
-    'ses',
-    region_name=AWS_REGION,
-    aws_access_key_id = AWS_ACCESS_KEY,
-    aws_secret_access_key = AWS_SECRET_KEY
-)
+    return boto3.client(
+        "ses",
+        region_name=region,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+    )
 
 
 async def send_test(email_content: UserReg):
     try:
-        response = ses_client.send_email(
+        response = get_ses_client().send_email(
             Source = "mail@keylocker.in",
             Destination = {
                 "ToAddresses" : [email_content.email]
@@ -46,7 +49,7 @@ async def send_test(email_content: UserReg):
 
 async def verify_mail(email_content: UserReg):
     try:
-        response = ses_client.verify_email_address(
+        response = get_ses_client().verify_email_address(
             EmailAddress=email_content.email  
         )
         return {
