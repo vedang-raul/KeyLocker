@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyLocker | Secure Command Center</title>
+    <style>
+        /* --- Digital Rain Background --- */
+    .bg-animation {
+
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background-color: #000;
+        /* 5 layers of varying heights and widths for a rich, organic feel */
+        background-image: 
+            radial-gradient(1px 80px at 20px 100px, rgba(255, 215, 0, 0.3), transparent),
+            radial-gradient(1px 40px at 100px 50px, rgba(255, 215, 0, 0.2), transparent),
+            radial-gradient(1.5px 120px at 180px 200px, rgba(255, 215, 0, 0.25), transparent),
+            radial-gradient(1px 60px at 250px 150px, rgba(255, 215, 0, 0.15), transparent),
+            radial-gradient(2px 2px at 50px 50px, rgba(255, 215, 0, 0.6) 100%, transparent 150%);
+
+        /* Different sizing for each layer creates the 'dense' look */
+        background-size: 300px 400px, 200px 250px, 350px 500px, 250px 300px, 150px 200px;
+        animation: digital-fall 12s linear infinite;
+    }
+
+    .bg-animation::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        /* Soft vignette keeps the center readable */
+        background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.85) 100%);
+        /* Fine scanlines for that 'monitor' texture */
+        background-image: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.3) 2px);
+        pointer-events: none;
+    }
+
+    @keyframes digital-fall {
+        0% { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%; }
+        100% { background-position: 0% 400px, 0% 250px, 0% 500px, 0% 300px, 0% 200px; }
+    }
+
+        body { margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; font-family: 'Segoe UI', sans-serif; background: #000; color: white; }
+        
+        /* --- Main Container --- */
+        .container { 
+            position: relative; z-index: 2; 
+            background: rgba(0, 0, 0, 0.079); 
+            backdrop-filter: blur(5px); 
+            padding: 2.5rem; border-radius: 18px; 
+            width: 90%; max-width: 400px; 
+            box-shadow: 0 20px 50px #ffde2310; 
+            border: 1px solid #ffde2310; 
+            transition: max-width 0.5s ease;
+        }
+        
+        .main-dashboard { max-width: 850px !important; } /* Expanded state */
+
+        h2 { color: #FFD700; text-align: center; margin-bottom: 1.5rem; }
+        input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #333; border-radius: 6px; background: #111; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #FFD700; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
+
+        /* --- Grid & Cards --- */
+        .api-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .api-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,215,0,0.1); padding: 20px; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.3s; }
+        .api-card:hover { border-color: #FFD700; background: rgba(255,215,0,0.05); }
+
+        .stats-bar { display: flex; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px; }
+
+        /* --- Modal Styling --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(8px); z-index: 1000; display: none; justify-content: center; align-items: center; }
+        .modal-content { background: #111; padding: 40px; border-radius: 20px; width: 450px; border: 1px solid #FFD700; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; }
+
+        /* --- Stepper UI --- */
+        .stepper-step { display: flex; gap: 15px; margin-bottom: 20px; position: relative; opacity: 0.4; }
+        .stepper-active { opacity: 1; }
+        .stepper-completed { opacity: 1; color: #28a745; }
+        .stepper-circle { width: 30px; height: 30px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .stepper-completed .stepper-circle { background: #28a745; color: white; }
+        .stepper-active .stepper-circle { background: #FFD700; color: #000; box-shadow: 0 0 10px #FFD700; }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <div class="container" id="main-container">
+        <div id="auth-view">
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <img src="logo.png" alt="KeyLocker Logo" style="width: 300px; height: auto;">
+            </div>
+            <div id="signup-fields" style="display:none;">
+                <input type="text" id="name" placeholder="Full Name">
+            </div>
+            <input type="email" id="email" placeholder="Corporate Email">
+            <input type="password" id="password" placeholder="Password">
+            <button id="submit-btn" onclick="handleAuth()">Access System</button>
+            <p style="text-align:center; font-size:0.8rem; margin-top:15px;">
+                <span id="toggle-text">New Operative?</span> 
+                <span onclick="toggleMode()" style="color:#FFD700; cursor:pointer; font-weight:bold;">Switch Mode</span>
+            </p>
+            <div id="auth-msg" style="text-align:center; margin-top:10px; font-size:0.8rem;"></div>
+        </div>
+
+        <div id="dashboard-view" style="display:none;">
+            <h2 id="welcome-msg" style="text-align:left;">Command Center</h2>
+            <div class="stats-bar">
+                <span>Approved: <b id="stat-approved">0</b></span>
+                <span>Consumed: <b id="stat-consumed">0</b></span>
+            </div>
+            
+            <div id="user-panel">
+                <div id="user-api-grid" class="api-grid"></div>
+            </div>
+
+            <div id="admin-panel" style="display:none;">
+                <h3>Admin: Register New Key</h3>
+                <input type="text" id="new-api-name" placeholder="API Name">
+                <input type="text" id="new-api-key" placeholder="Actual API Key">
+                <button onclick="adminAddKey()">Deploy Key</button>
+                <h4 style="margin-top:20px;">Pending Requests</h4>
+                <div id="admin-requests-list"></div>
+                <div id="admin-inventory-section" style="margin-top: 40px; border-top: 1px solid rgba(255,215,0,0.1); padding-top: 20px;">
+                        <h3>Active Vault Inventory</h3>
+                        <div id="admin-keys-list" class="api-grid">
+                </div>
+                </div>
+            </div>
+            
+            <button onclick="location.reload()" style="background:#222; color:white; margin-top:30px; width:auto;">Logout</button>
+        </div>
+    </div>
+
+    <div id="api-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 id="modal-api-name" style="margin-bottom:30px;">API Workspace</h2>
+            
+            <div id="modal-stepper">
+                <div class="stepper-step stepper-completed" id="m-step-1">
+                    <div class="stepper-circle">1</div>
+                    <div><b>Initialized</b></div>
+                </div>
+                <div class="stepper-step" id="m-step-2">
+                    <div class="stepper-circle" id="m-circle-2">2</div>
+                    <div><b id="m-text-2">Admin Review</b></div>
+                </div>
+                <div class="stepper-step" id="m-step-3">
+                    <div class="stepper-circle">3</div>
+                    <div><b>Key Delivery</b></div>
+                </div>
+            </div>
+
+            <div id="modal-action-area" style="margin-top:30px; text-align:center;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "https://keylocker-1.onrender.com";
+        let currentUser = null;
+        let isLogin = true;
+
+        function toggleMode() {
+            isLogin = !isLogin;
+            document.getElementById('form-title').innerText = isLogin ? "KeyLocker Login" : "Create Account";
+            document.getElementById('signup-fields').style.display = isLogin ? "none" : "block";
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const authMsg = document.getElementById('auth-msg');
+            
+        // Simple UI Feedback
+            authMsg.innerText = "Processing clearance...";
+            authMsg.style.color = "#FFD700";
+
+            if(isLogin) {
+                try {
+                    const res = await fetch(`${API_BASE}/login`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    if(res.ok) {
+                        currentUser = data.user;
+                        showDashboard();
+                    } else { 
+                        authMsg.innerText = data.detail;
+                        authMsg.style.color = "#dc3545";
+                    }
+                } catch (e) { authMsg.innerText = "Vault Offline."; }
+            } else {
+        // -    -- REAL SIGNUP LOGIC ---
+                const name = document.getElementById('name').value;
+                const role = "User"; // Default role
+
+                try {
+                    const res = await fetch(`${API_BASE}/signup`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ name, email, password, role })
+                    });
+                    const data = await res.json();
+            
+                    if(res.ok) {
+                        authMsg.innerHTML = `<span style="color:#28a745">Operative Created! Check your email for TWO links: Amazon SES & KeyLocker Activation.</span>`;
+                        // Switch back to login mode so they can enter credentials after verifying
+                        setTimeout(() => { toggleMode(); }, 5000);
+                    } else {
+                        authMsg.innerText = data.detail;
+                        authMsg.style.color = "#dc3545";
+                    }
+                } catch (e) { authMsg.innerText = "Deployment Error."; }
+            }
+        }   
+
+        function showDashboard() {
+            document.getElementById('auth-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'block';
+            document.getElementById('main-container').classList.add('main-dashboard');
+            document.getElementById('welcome-msg').innerText = `Welcome, ${currentUser.name}`;
+
+            if(currentUser.role.toLowerCase() === 'admin') {
+                document.getElementById('admin-panel').style.display = 'block';
+                loadPendingRequests();
+            } else {
+                loadUserAPIs();
+                updateStats();
+            }
+            if (currentUser.role.toLowerCase() === 'admin') {
+                document.getElementById('admin-panel').style.display = 'block';
+                    loadPendingRequests();
+                    loadAllKeys(); // Add this line here!
+            }
+        }
+    async function loadPendingRequests() {
+        try {
+            const res = await fetch(`${API_BASE}/admin/requests`);
+            const requests = await res.json();
+            const list = document.getElementById('admin-requests-list');
+
+            if (requests.length === 0) {
+                list.innerHTML = "<p style='opacity:0.5; padding:20px;'>No pending clearance requests.</p>";
+                return;
+            }
+
+            list.innerHTML = requests.map(req => `
+                <div class="api-card" style="display:flex; justify-content:space-between; align-items:center; text-align:left;">
+                    <div>
+                        <strong style="color:#FFD700;">${req.api_name}</strong><br>
+                        <small>User ID: ${req.requestee_id} (${req.user_name})</small>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="approveRequest(${req.request_id})" style="width:40px; background:#28a745;">✔</button>
+                        <button onclick="rejectRequest(${req.request_id})" style="width:40px; background:#dc3545;">✖</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error("Admin Sync Error:", e);
+        }
+    }
+    async function adminAddKey() {
+        const apiNameInput = document.getElementById('new-api-name');
+        const apiKeyInput = document.getElementById('new-api-key');
+        
+        const api_name = apiNameInput.value.trim();
+        const api_key = apiKeyInput.value.trim();
+
+        if (!api_name || !api_key) {
+            alert("System Error: Both API Name and Key are required for deployment.");
+            return;
+        }
+
+        try {
+            const payload = {
+                api_name: api_name,
+                api_key: api_key,
+                owner_id: currentUser.emp_id // Matches KeyReg schema
+            };
+
+            const res = await fetch(`${API_BASE}/admin/keys`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+            alert(`Success: ${api_name} has been deployed to the vault.`);
+                // Clear inputs
+                apiNameInput.value = '';
+                apiKeyInput.value = '';
+
+                // If the admin panel has a list of all keys, refresh it here
+                if (typeof loadAllKeys === "function") loadAllKeys(); 
+            } else {
+                alert("Deployment Failed: " + (data.detail || "Unknown error"));
+            }
+        } catch (e) {
+            console.error("Vault Connection Error:", e);
+            alert("System Offline: Backend unreachable.");
+        }
+    }
+    async function approveRequest(id) {
+        const res = await fetch(`${API_BASE}/admin/requests/${id}/approve`, { method: 'PATCH' });
+        if (res.ok) {
+            alert("Access Granted.");
+            loadPendingRequests(); // Refresh the list
+        }
+    }
+
+    async function rejectRequest(id) {
+        const reason = prompt("Enter reason for denial:");
+        if (!reason) return;
+        const res = await fetch(`${API_BASE}/admin/requests/${id}/reject?reason=${encodeURIComponent(reason)}`, { method: 'PATCH' });
+        if (res.ok) {
+            alert("Access Denied.");
+            loadPendingRequests(); // Refresh the list
+        }
+    }
+
+        async function loadUserAPIs() {
+            try {
+                const [apisRes, reqsRes, keysRes] = await Promise.all([
+                    fetch(`${API_BASE}/user/available-apis`),
+                    fetch(`${API_BASE}/user/my-requests/${currentUser.emp_id}`),
+                    fetch(`${API_BASE}/user/my-keys/${currentUser.emp_id}`)
+                ]);
+
+                const apis = await apisRes.json();     // Returns ["OpenAI", "Claude"]
+                const pending = await reqsRes.json();  // Returns ["OpenAI"]
+                const approved = await keysRes.json(); // Returns [{api_name: "Claude", api_key: "..."}]
+
+                const grid = document.getElementById('user-api-grid');
+                grid.innerHTML = apis.map(api => {
+                    // Check if this specific API name exists in the approved list
+                    const isApproved = approved.find(k => k.api_name === api);
+                    // Check if this specific API name exists in the pending string list
+                    const isPending = pending.includes(api);
+
+                    let statusTag = isApproved ? '✅ Ready' : (isPending ? '⏳ Pending' : '🔒 Locked');
+
+                    return `
+                        <div class="api-card" onclick="openAPIWorkspace('${api}')">
+                            <h3 style="margin:0; color:#FFD700;">${api}</h3>
+                            <p style="font-size:0.8rem; color:#aaa; margin-top:10px;">Status: ${statusTag}</p>
+                        </div>
+                    `;
+                }).join('');
+
+                updateStats();
+            } catch (e) {
+                console.error("Failed to sync with Vault:", e);
+            }
+        }
+    async function userMakeRequest(api) {
+        // 1. Validation Check
+        if (!currentUser || !currentUser.emp_id) {
+            alert("Session Error: Please re-login.");
+            return;
+        }
+
+        try {
+            const payload = { 
+                api_name: api, 
+                requestee_id: parseInt(currentUser.emp_id),
+                status: "Pending" 
+            };
+
+            console.log("Sending Payload:", payload); // DEBUG: Check console (F12)
+
+            const res = await fetch(`${API_BASE}/user/request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                console.log("Request Successful");
+                // Refresh the workspace modal to show the 'In Review' stepper
+                openAPIWorkspace(api); 
+            } else {
+                const errData = await res.json();
+                console.error("Backend Rejected Request:", errData);
+                alert("Error: " + JSON.stringify(errData.detail));
+            }
+        } catch (e) {
+            console.error("Network/Connection Error:", e);
+            alert("Failed to connect to backend server.");
+        }
+    }
+
+    async function openAPIWorkspace(apiName) {
+        const modal = document.getElementById('api-modal');
+        modal.style.display = 'flex';
+        document.getElementById('modal-api-name').innerText = apiName;
+            
+        const actionArea = document.getElementById('modal-action-area');
+        actionArea.innerHTML = "Refining connection..."; // Feedback
+
+        try {
+            const [reqsRes, keysRes] = await Promise.all([
+                fetch(`${API_BASE}/user/my-requests/${currentUser.emp_id}`),
+                fetch(`${API_BASE}/user/my-keys/${currentUser.emp_id}`)
+            ]);
+
+            const pending = await reqsRes.json(); // Array of strings: ["API Name"]
+            const approved = await keysRes.json(); // Array of objects: [{api_name: "X", api_key: "Y"}]
+
+            const keyObj = approved.find(k => k.api_name === apiName);
+            const isPending = pending.includes(apiName);
+
+            if (keyObj) {
+                setStepper(3);
+                actionArea.innerHTML = `
+                    <div style="background:#1a1a1a; padding:15px; border-radius:8px; border:1px dashed #FFD700; margin-bottom:15px;">
+                        <code style="color:#FFD700;">••••••••••••${keyObj.api_key.slice(-4)}</code>
+                    </div>
+                    <button onclick="copyAndBurn('${apiName}','${keyObj.api_key}')">DECRYPT & COPY</button>`;
+            } else if (isPending) {
+                setStepper(2);
+                actionArea.innerHTML = `<p style="color:#FFD700; font-family:monospace;">SYSTEM: AWAITING ADMIN CLEARANCE...</p>`;
+            } else {
+                setStepper(1);
+                actionArea.innerHTML = `<button onclick="userMakeRequest('${apiName}')">INITIALIZE REQUEST</button>`;
+            }
+        } catch (err) {
+            actionArea.innerHTML = "Failed to sync status.";
+        }
+    }
+
+        function setStepper(step) {
+            document.getElementById('m-step-2').className = step >= 2 ? "stepper-step stepper-active" : "stepper-step";
+            document.getElementById('m-step-3').className = step >= 3 ? "stepper-step stepper-active" : "stepper-step";
+            if(step === 3) document.getElementById('m-circle-2').innerText = "✔";
+        }
+
+        async function userMakeRequest(api) {
+            await fetch(`${API_BASE}/user/request`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ api_name: api, requestee_id: currentUser.emp_id })
+            });
+            openAPIWorkspace(api);
+        }
+
+        async function copyAndBurn(name, key) {
+            await navigator.clipboard.writeText(key);
+            await fetch(`${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, {method: 'PATCH'});
+            alert("Key Burned!");
+            closeModal();
+        }
+
+        function closeModal() { 
+            document.getElementById('api-modal').style.display = 'none'; 
+            loadUserAPIs();
+        }
+    async function updateStats() {
+        if (!currentUser || !currentUser.emp_id) return;
+            
+        try {
+            const res = await fetch(`${API_BASE}/user/stats/${currentUser.emp_id}`);
+            if (!res.ok) throw new Error("Stats fetch failed");
+
+            const stats = await res.json();
+
+            // Target the <b> tags in your stats-bar
+            const approvedEl = document.getElementById('stat-approved');
+            const consumedEl = document.getElementById('stat-consumed');
+            
+            if (approvedEl) approvedEl.innerText = stats.approved || 0;
+            if (consumedEl) consumedEl.innerText = stats.consumed || 0;
+            
+            console.log("Stats Updated:", stats);
+        } catch (e) {
+            console.error("Error updating dashboard stats:", e);
+        }
+    }
+    async function copyAndBurn(name, key) {
+        try {
+            // 1. Copy to Clipboard
+            await navigator.clipboard.writeText(key);
+
+            // 2. Tell Backend to change status from 'Approved' to 'Consumed'
+            const res = await fetch(`${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, {
+                method: 'PATCH'
+            });
+
+            if (res.ok) {
+                alert("KEY COPIED: This access key has been burned from the database for security.");
+
+                closeModal();    // Close the workspace
+                loadUserAPIs();  // Refresh the grid (the key will disappear)
+                updateStats();   // Update the Approved/Consumed counts
+            } else {
+                alert("Failed to burn key. Contact Admin.");
+            }
+        } catch (err) {
+            console.error("Burn Logic Failure:", err);
+            alert("Clipboard access denied or Network error.");
+        }
+    }
+    async function loadAllKeys() {
+        try {
+            const res = await fetch(`${API_BASE}/user/available-apis`);
+            const apis = await res.json();
+            const list = document.getElementById('admin-keys-list');
+
+            if (apis.length === 0) {
+                list.innerHTML = "<p style='opacity:0.5; grid-column: 1/-1; text-align:center;'>Vault empty. No active keys found.</p>";
+                return;
+            }
+
+            // Mapping to the exact same card structure as the User side
+            list.innerHTML = apis.map(api => `
+                <div class="api-card">
+                    <h3 style="margin:0; color:#FFD700; font-size: 1.1rem;">${api}</h3>
+                    <p style="font-size:0.7rem; color:#aaa; margin: 10px 0 15px 0;">SYSTEM ACTIVE</p>
+                    <button onclick="deleteKey('${api}')" 
+                            style="background:#dc3545; color:white; font-size:0.75rem; padding: 8px;">
+                        REVOKE ACCESS
+                    </button>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error("Vault Sync Error:", e);
+        }
+    }
+
+    async function deleteKey(apiName) {
+        if (!confirm(`Are you sure you want to PERMANENTLY delete ${apiName}?`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/admin/keys/${encodeURIComponent(apiName)}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                alert(`${apiName} deleted successfully.`);
+                loadAllKeys(); // Refresh inventory
+                loadUserAPIs(); // Refresh the main grid if visible
+            } else {
+                alert("Failed to delete key.");
+            }
+        } catch (e) {
+            alert("System Error: Could not reach the vault.");
+        }
+    }
+    </script>
+</body>
+</html>
