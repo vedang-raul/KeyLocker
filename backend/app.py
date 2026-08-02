@@ -26,9 +26,18 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Recreate tables (especially since you dropped them earlier)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Do not make deployment health depend on the database being reachable.
+    # Render can start the web process while an external database is waking or
+    # being repaired. Schema creation is opt-in for one-off setup only.
+    if os.getenv("AUTO_CREATE_SCHEMA", "").lower() == "true":
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        except Exception as exc:
+            print(
+                "Database schema initialization skipped; "
+                f"the API is still starting: {type(exc).__name__}: {exc}"
+            )
     yield
     # Shutdown logic can go here
 
