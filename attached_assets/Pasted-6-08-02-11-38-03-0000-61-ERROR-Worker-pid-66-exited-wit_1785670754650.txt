@@ -1,0 +1,43 @@
+6-08-02 11:38:03 +0000] [61] [ERROR] Worker (pid:66) exited with code 3.
+==> ///////////////////////////////////////////////////////////
+==> 
+==> Available at your primary URL https://keylocker-1.onrender.com
+==> 
+==> ///////////////////////////////////////////////////////////
+==> 
+==> Your service is live 🎉
+[2026-08-02 11:37:55 +0000] [64] [INFO] Worker exiting (pid: 64)
+[2026-08-02 11:37:55 +0000] [65] [INFO] Worker exiting (pid: 65)
+[2026-08-02 11:37:55 +0000] [66] [INFO] Worker exiting (pid: 66)
+[2026-08-02 11:37:55 +0000] [64] [ERROR] Application startup failed. Exiting.
+socket.gaierror: [Errno -2] Name or service not known
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+  File "/opt/render/project/python/Python-3.12.13/lib/python3.12/socket.py", line 978, in getaddrinfo
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    result = self.fn(*self.args, **self.kwargs)
+  File "/opt/render/project/python/Python-3.12.13/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    return await self.run_in_executor(
+  File "/opt/render/project/python/Python-3.12.13/lib/python3.12/asyncio/base_events.py", line 905, in getaddrinfo
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    return await loop.getaddrinfo(host, port, family=family, type=type,
+  File "/opt/render/project/python/Python-3.12.13/lib/python3.12/asyncio/base_events.py", line 1466, in _ensure_resolved
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    infos = await self._ensure_resolved(
+  File "/opt/render/project/python/Python-3.12.13/lib/python3.12/asyncio/base_events.py", line 1083, in create_connection
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    tr, pr = await loop.create_connection(
+  File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 969, in _create_ssl_connection
+             ^^^^^^^^^^^^^^^
+    tr, pr = await connector
+  File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 1099, in __connect_addr
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    return await __connect_addr(params, True, *args)
+  File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 1054, in _connect_addr
+           ^^^^^^^^^^^^^^^^^^^^
+    conn = await _connect_addr(
+  File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 1218, in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+  File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 1249, in _connect
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

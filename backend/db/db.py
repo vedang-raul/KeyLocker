@@ -5,15 +5,34 @@ from sqlalchemy.orm import declarative_base
 
 load_dotenv()
 
-raw_url = os.getenv("DIRECT_URL")
+raw_url = os.getenv("DATABASE_URL") or os.getenv("DIRECT_URL")
 
-# Safety check for Render's URL format
-if raw_url and raw_url.startswith("postgres://"):
+if not raw_url:
+    raise RuntimeError(
+        "Database configuration is missing. Set DATABASE_URL in Render "
+        "(DIRECT_URL is supported as a fallback)."
+    )
+
+if raw_url.startswith("postgres://"):
     database_url = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
-else:
+elif raw_url.startswith("postgresql://"):
+    database_url = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif raw_url.startswith("postgresql+asyncpg://"):
     database_url = raw_url
+else:
+    raise RuntimeError(
+        "Database URL must use postgres://, postgresql://, or "
+        "postgresql+asyncpg://."
+    )
 
-engine = create_async_engine(database_url)
+# Creating the engine does not connect to the database. Connections are made
+# only when an endpoint needs them, so a temporary DNS/database outage does
+# not take down every web worker during deployment.
+engine = create_async_engine(
+    database_url,
+    pool_pre_ping=True,
+    connect_args={"timeout": 10},
+)
 
 SessionLocal = async_sessionmaker(
     bind=engine, 
