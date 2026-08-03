@@ -1,1 +1,2 @@
 - [External backend availability](external-backend-availability.md) — a healthy local frontend preview does not guarantee the configured third-party API is awake or deployed.
+- [Gateway authorization boundary](gateway-authorization-boundary.md) — enforce JWT identity and admin/employee ownership on the backend before proxying paid provider keys.
