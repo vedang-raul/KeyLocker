@@ -162,16 +162,25 @@
         const API_BASE = "https://keylocker-2.onrender.com";
         const MAX_API_RETRIES = 2;
         let currentUser = null;
+        let accessToken = null;
         let isLogin = true;
 
         const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        function apiFetch(path, options = {}) {
+            const headers = { ...(options.headers || {}) };
+            if (accessToken) {
+                headers.Authorization = `Bearer ${accessToken}`;
+            }
+            return fetch(`${API_BASE}${path}`, { ...options, headers });
+        }
 
         async function requestJson(path, options = {}) {
             let lastError;
 
             for (let attempt = 0; attempt <= MAX_API_RETRIES; attempt++) {
                 try {
-                    const response = await fetch(`${API_BASE}${path}`, options);
+                    const response = await apiFetch(path, options);
                     const contentType = response.headers.get("content-type") || "";
                     const body = contentType.includes("application/json")
                         ? await response.json()
@@ -239,6 +248,7 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ email, password })
                     });
+                    accessToken = data.access_token;
                     currentUser = data.user;
                     showDashboard();
                 } catch (e) {
@@ -287,7 +297,7 @@
         }
     async function loadPendingRequests() {
         try {
-            const res = await fetch(`${API_BASE}/admin/requests`);
+            const res = await apiFetch("/admin/requests");
             const requests = await res.json();
             const list = document.getElementById('admin-requests-list');
 
@@ -331,7 +341,7 @@
                 owner_id: currentUser.emp_id // Matches KeyReg schema
             };
 
-            const res = await fetch(`${API_BASE}/admin/keys`, {
+            const res = await apiFetch("/admin/keys", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -356,7 +366,7 @@
         }
     }
     async function approveRequest(id) {
-        const res = await fetch(`${API_BASE}/admin/requests/${id}/approve`, { method: 'PATCH' });
+        const res = await apiFetch(`/admin/requests/${id}/approve`, { method: 'PATCH' });
         if (res.ok) {
             alert("Access Granted.");
             loadPendingRequests(); // Refresh the list
@@ -366,7 +376,7 @@
     async function rejectRequest(id) {
         const reason = prompt("Enter reason for denial:");
         if (!reason) return;
-        const res = await fetch(`${API_BASE}/admin/requests/${id}/reject?reason=${encodeURIComponent(reason)}`, { method: 'PATCH' });
+        const res = await apiFetch(`/admin/requests/${id}/reject?reason=${encodeURIComponent(reason)}`, { method: 'PATCH' });
         if (res.ok) {
             alert("Access Denied.");
             loadPendingRequests(); // Refresh the list
@@ -376,9 +386,9 @@
         async function loadUserAPIs() {
             try {
                 const [apisRes, reqsRes, keysRes] = await Promise.all([
-                    fetch(`${API_BASE}/user/available-apis`),
-                    fetch(`${API_BASE}/user/my-requests/${currentUser.emp_id}`),
-                    fetch(`${API_BASE}/user/my-keys/${currentUser.emp_id}`)
+                    apiFetch("/user/available-apis"),
+                    apiFetch(`/user/my-requests/${currentUser.emp_id}`),
+                    apiFetch(`/user/my-keys/${currentUser.emp_id}`)
                 ]);
 
                 const apis = await apisRes.json();     // Returns ["OpenAI", "Claude"]
@@ -423,7 +433,7 @@
 
             console.log("Sending Payload:", payload); // DEBUG: Check console (F12)
 
-            const res = await fetch(`${API_BASE}/user/request`, {
+            const res = await apiFetch("/user/request", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -454,8 +464,8 @@
 
         try {
             const [reqsRes, keysRes] = await Promise.all([
-                fetch(`${API_BASE}/user/my-requests/${currentUser.emp_id}`),
-                fetch(`${API_BASE}/user/my-keys/${currentUser.emp_id}`)
+                apiFetch(`/user/my-requests/${currentUser.emp_id}`),
+                apiFetch(`/user/my-keys/${currentUser.emp_id}`)
             ]);
 
             const pending = await reqsRes.json(); // Array of strings: ["API Name"]
@@ -490,7 +500,7 @@
         }
 
         async function userMakeRequest(api) {
-            await fetch(`${API_BASE}/user/request`, {
+            await apiFetch("/user/request", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ api_name: api, requestee_id: currentUser.emp_id })
@@ -500,7 +510,7 @@
 
         async function copyAndBurn(name, key) {
             await navigator.clipboard.writeText(key);
-            await fetch(`${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, {method: 'PATCH'});
+            await apiFetch(`/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, {method: 'PATCH'});
             alert("Key Burned!");
             closeModal();
         }
@@ -513,7 +523,7 @@
         if (!currentUser || !currentUser.emp_id) return;
             
         try {
-            const res = await fetch(`${API_BASE}/user/stats/${currentUser.emp_id}`);
+            const res = await apiFetch(`/user/stats/${currentUser.emp_id}`);
             if (!res.ok) throw new Error("Stats fetch failed");
 
             const stats = await res.json();
@@ -536,7 +546,7 @@
             await navigator.clipboard.writeText(key);
 
             // 2. Tell Backend to change status from 'Approved' to 'Consumed'
-            const res = await fetch(`${API_BASE}/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, {
+            const res = await apiFetch(`/user/requests/consume?api_name=${encodeURIComponent(name)}&user_id=${currentUser.emp_id}`, {
                 method: 'PATCH'
             });
 
@@ -556,7 +566,7 @@
     }
     async function loadAllKeys() {
         try {
-            const res = await fetch(`${API_BASE}/user/available-apis`);
+            const res = await apiFetch("/user/available-apis");
             const apis = await res.json();
             const list = document.getElementById('admin-keys-list');
 
@@ -585,7 +595,7 @@
         if (!confirm(`Are you sure you want to PERMANENTLY delete ${apiName}?`)) return;
 
         try {
-            const res = await fetch(`${API_BASE}/admin/keys/${encodeURIComponent(apiName)}`, {
+            const res = await apiFetch(`/admin/keys/${encodeURIComponent(apiName)}`, {
                 method: 'DELETE'
             });
 
