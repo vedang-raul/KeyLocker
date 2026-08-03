@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException,status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from itsdangerous import URLSafeTimedSerializer
@@ -57,11 +58,73 @@ serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
+bearer_scheme = HTTPBearer(auto_error=False)
+
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+):
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+        )
+        user_id = payload.get("id")
+        if user_id is None:
+            raise JWTError("Token does not contain a user id")
+        user_id = int(user_id)
+    except (JWTError, TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    result = await db.execute(select(Users).where(Users.emp_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is unavailable",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+async def require_admin(
+    current_user: Users = Depends(get_current_user),
+):
+    if (current_user.role or "").lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
+
+
+def require_same_user(user_id: int, current_user: Users):
+    if user_id != current_user.emp_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only access your own account",
+        )
+
+
 @app.get("/")
 async def health_check():
     return {"status": "online", "service": "KeyLocker"}
@@ -191,7 +254,11 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
         }
     }
 @app.patch("/admin/requests/{request_id}/approve")
-async def approve_request(request_id: int, db: AsyncSession = Depends(get_db)):
+async def approve_request(
+    request_id: int,
+    db: AsyncSession = Depends(get_db),
+    _admin: Users = Depends(require_admin),
+):
     # 1. Update Request Status
     query = select(Requests).where(Requests.request_id == request_id)
     result = await db.execute(query)
@@ -224,7 +291,11 @@ async def approve_request(request_id: int, db: AsyncSession = Depends(get_db)):
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 @app.post("/admin/keys")
-async def admin_add_key(key_data: KeyReg, db: AsyncSession = Depends(get_db)):
+async def admin_add_key(
+    key_data: KeyReg,
+    db: AsyncSession = Depends(get_db),
+    _admin: Users = Depends(require_admin),
+):
     new_api = APIkeys(
         api_name=key_data.api_name,
         api_key=key_data.api_key,
@@ -236,7 +307,10 @@ async def admin_add_key(key_data: KeyReg, db: AsyncSession = Depends(get_db)):
 
 # Admin: View all requests currently in 'Pending' status
 @app.get("/admin/requests")
-async def get_all_requests(db: AsyncSession = Depends(get_db)):
+async def get_all_requests(
+    db: AsyncSession = Depends(get_db),
+    _admin: Users = Depends(require_admin),
+):
     # Join Requests with Users to get the requester's name
     query = select(
         Requests.request_id,
@@ -259,14 +333,22 @@ async def get_all_requests(db: AsyncSession = Depends(get_db)):
 
 # User: See names of APIs available to request (Hides the actual keys)
 @app.get("/user/available-apis")
-async def get_api_names(db: AsyncSession = Depends(get_db)):
+async def get_api_names(
+    db: AsyncSession = Depends(get_db),
+    _current_user: Users = Depends(get_current_user),
+):
     query = select(APIkeys.api_name).distinct()
     result = await db.execute(query)
     return result.scalars().all()
 
 # User: Submit a request for a specific API
 @app.post("/user/request")
-async def create_user_request(req_data: ReqReg, db: AsyncSession = Depends(get_db)):
+async def create_user_request(
+    req_data: ReqReg,
+    db: AsyncSession = Depends(get_db),
+    current_user: Users = Depends(get_current_user),
+):
+    require_same_user(req_data.requestee_id, current_user)
     new_request = Requests(
         api_name=req_data.api_name,
         requestee_id=req_data.requestee_id, # Use the ID from the frontend payload
@@ -276,7 +358,12 @@ async def create_user_request(req_data: ReqReg, db: AsyncSession = Depends(get_d
     await db.commit()
     return {"message": "Request submitted successfully!"}
 @app.get("/user/my-keys/{user_id}")
-async def get_user_approved_keys(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_approved_keys(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: Users = Depends(get_current_user),
+):
+    require_same_user(user_id, current_user)
     # This query joins Requests and APIkeys on the api_name
     # It only returns keys where the specific user's request is 'Approved'
     query = select(APIkeys.api_name, APIkeys.api_key).join(
@@ -291,7 +378,12 @@ async def get_user_approved_keys(user_id: int, db: AsyncSession = Depends(get_db
     keys = result.all()
     return [{"api_name": k[0], "api_key": k[1]} for k in keys]
 @app.get("/user/my-requests/{user_id}")
-async def get_user_requests(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_requests(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: Users = Depends(get_current_user),
+):
+    require_same_user(user_id, current_user)
     # Only return API names where the status is currently 'Pending'
     query = select(Requests.api_name).where(
         Requests.requestee_id == user_id,
@@ -300,7 +392,13 @@ async def get_user_requests(user_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(query)
     return result.scalars().all()
 @app.patch("/user/requests/consume")
-async def consume_request(api_name: str, user_id: int, db: AsyncSession = Depends(get_db)):
+async def consume_request(
+    api_name: str,
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: Users = Depends(get_current_user),
+):
+    require_same_user(user_id, current_user)
     # Find the specific approved request
     query = select(Requests).where(
         Requests.api_name == api_name,
@@ -323,7 +421,12 @@ async def consume_request(api_name: str, user_id: int, db: AsyncSession = Depend
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 @app.patch("/admin/requests/{request_id}/reject")
-async def reject_request(request_id: int, reason: str, db: AsyncSession = Depends(get_db)):
+async def reject_request(
+    request_id: int,
+    reason: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: Users = Depends(require_admin),
+):
     # 1. Fetch the request
     query = select(Requests).where(Requests.request_id == request_id)
     result = await db.execute(query)
@@ -363,7 +466,12 @@ async def reject_request(request_id: int, reason: str, db: AsyncSession = Depend
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.get("/user/stats/{user_id}")
-async def get_user_stats(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_stats(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: Users = Depends(get_current_user),
+):
+    require_same_user(user_id, current_user)
     # Count Approved keys
     approved_query = select(Requests).where(Requests.requestee_id == user_id, Requests.status == "Approved")
     # Count Consumed keys
@@ -411,7 +519,11 @@ async def reset_password_confirm(token: str, new_password: str, db: AsyncSession
         raise HTTPException(status_code=400, detail="Invalid or expired token.")
 
 @app.delete("/admin/keys/{api_name}")
-async def delete_api_key(api_name: str, db: AsyncSession = Depends(get_db)):
+async def delete_api_key(
+    api_name: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: Users = Depends(require_admin),
+):
     query = select(APIkeys).where(APIkeys.api_name == api_name)
     result = await db.execute(query)
     key = result.scalar_one_or_none()
