@@ -144,6 +144,7 @@
                     <input type="text" id="monitor-label" placeholder="Nickname (e.g. Prod OpenAI Key)">
                     <input type="text" id="monitor-key" placeholder="API Key to Monitor">
                     <button onclick="addMonitoredApi()">Start Monitoring</button>
+                    <div id="monitor-add-status" style="font-size:0.8rem; margin-top:8px; min-height:16px;"></div>
                     <h4 style="margin-top:20px;">Monitored APIs</h4>
                     <div id="monitor-list" class="api-grid"></div>
                 </div>
@@ -357,15 +358,18 @@
             const providerEl = document.getElementById('monitor-provider');
             const labelEl = document.getElementById('monitor-label');
             const keyEl = document.getElementById('monitor-key');
+            const statusEl = document.getElementById('monitor-add-status');
 
             const provider = providerEl.value;
             const label = labelEl.value.trim();
             const api_key = keyEl.value.trim();
 
             if (!provider || !label || !api_key) {
-                alert("Provider, nickname, and API key are all required.");
+                statusEl.innerHTML = `<span style="color:#dc3545;">Provider, nickname, and API key are all required.</span>`;
                 return;
             }
+
+            statusEl.innerHTML = `<span style="color:#aaa;">Adding...</span>`;
 
             try {
                 const res = await apiFetch("/admin/monitor/apis", {
@@ -378,13 +382,14 @@
                 if (res.ok) {
                     labelEl.value = '';
                     keyEl.value = '';
+                    statusEl.innerHTML = `<span style="color:#28a745;">Monitoring started.</span>`;
                     loadMonitoredApis();
                 } else {
-                    alert("Failed to add monitor: " + (data.detail || "Unknown error"));
+                    statusEl.innerHTML = `<span style="color:#dc3545;">${data.detail || "Failed to add monitor."}</span>`;
                 }
             } catch (e) {
                 console.error("Monitor Add Error:", e);
-                alert("System Offline: Backend unreachable.");
+                statusEl.innerHTML = `<span style="color:#dc3545;">System offline: backend unreachable.</span>`;
             }
         }
 
@@ -404,9 +409,9 @@
                         <h3 style="margin:0; color:#FFD700; font-size:1.1rem;">${e.label}</h3>
                         <p style="font-size:0.7rem; color:#aaa; margin:8px 0;">${e.provider} &middot; <code>${e.masked_key}</code></p>
                         <div id="monitor-usage-${e.monitor_id}" style="font-size:0.85rem; margin:10px 0; min-height:20px;">-</div>
-                        <div style="display:flex; gap:8px;">
+                        <div id="monitor-actions-${e.monitor_id}" style="display:flex; gap:8px;">
                             <button onclick="refreshMonitorUsage(${e.monitor_id})" style="font-size:0.75rem; padding:8px;">Refresh</button>
-                            <button onclick="deleteMonitoredApi(${e.monitor_id})" style="background:#dc3545; color:white; font-size:0.75rem; padding:8px;">Remove</button>
+                            <button onclick="promptRemoveMonitor(${e.monitor_id})" style="background:#dc3545; color:white; font-size:0.75rem; padding:8px;">Remove</button>
                         </div>
                     </div>
                 `).join('');
@@ -432,17 +437,29 @@
             }
         }
 
+        function promptRemoveMonitor(monitorId) {
+            const actions = document.getElementById(`monitor-actions-${monitorId}`);
+            if (!actions) return;
+            actions.innerHTML = `
+                <span style="font-size:0.75rem; align-self:center;">Remove this monitor?</span>
+                <button onclick="deleteMonitoredApi(${monitorId})" style="background:#dc3545; color:white; font-size:0.75rem; padding:8px; width:auto;">Confirm</button>
+                <button onclick="loadMonitoredApis()" style="background:#222; color:#FFD700; font-size:0.75rem; padding:8px; width:auto;">Cancel</button>
+            `;
+        }
+
         async function deleteMonitoredApi(monitorId) {
-            if (!confirm("Stop monitoring this API key?")) return;
+            const actions = document.getElementById(`monitor-actions-${monitorId}`);
+            if (actions) actions.innerHTML = `<span style="font-size:0.75rem;">Removing...</span>`;
             try {
                 const res = await apiFetch(`/admin/monitor/apis/${monitorId}`, { method: 'DELETE' });
                 if (res.ok) {
                     loadMonitoredApis();
                 } else {
-                    alert("Failed to remove monitor.");
+                    const data = await res.json().catch(() => ({}));
+                    if (actions) actions.innerHTML = `<span style="color:#dc3545; font-size:0.75rem;">${data.detail || "Failed to remove monitor."}</span>`;
                 }
             } catch (e) {
-                alert("System Error: Could not reach the vault.");
+                if (actions) actions.innerHTML = `<span style="color:#dc3545; font-size:0.75rem;">Network error — backend unreachable.</span>`;
             }
         }
     async function loadPendingRequests() {
