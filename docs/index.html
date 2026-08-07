@@ -117,16 +117,35 @@
             </div>
 
             <div id="admin-panel" style="display:none;">
-                <h3>Admin: Register New Key</h3>
-                <input type="text" id="new-api-name" placeholder="API Name">
-                <input type="text" id="new-api-key" placeholder="Actual API Key">
-                <button onclick="adminAddKey()">Deploy Key</button>
-                <h4 style="margin-top:20px;">Pending Requests</h4>
-                <div id="admin-requests-list"></div>
-                <div id="admin-inventory-section" style="margin-top: 40px; border-top: 1px solid rgba(255,215,0,0.1); padding-top: 20px;">
-                        <h3>Active Vault Inventory</h3>
-                        <div id="admin-keys-list" class="api-grid">
+                <div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
+                    <button onclick="switchAdminTab('vault')" id="tab-btn-vault" style="width:auto; flex:1;">Vault</button>
+                    <button onclick="switchAdminTab('monitor')" id="tab-btn-monitor" style="width:auto; flex:1; background:#222; color:#FFD700;">Monitoring</button>
                 </div>
+
+                <div id="admin-tab-vault">
+                    <h3>Admin: Register New Key</h3>
+                    <input type="text" id="new-api-name" placeholder="API Name">
+                    <input type="text" id="new-api-key" placeholder="Actual API Key">
+                    <button onclick="adminAddKey()">Deploy Key</button>
+                    <h4 style="margin-top:20px;">Pending Requests</h4>
+                    <div id="admin-requests-list"></div>
+                    <div id="admin-inventory-section" style="margin-top: 40px; border-top: 1px solid rgba(255,215,0,0.1); padding-top: 20px;">
+                            <h3>Active Vault Inventory</h3>
+                            <div id="admin-keys-list" class="api-grid">
+                    </div>
+                    </div>
+                </div>
+
+                <div id="admin-tab-monitor" style="display:none;">
+                    <h3>Monitor a New API Key</h3>
+                    <select id="monitor-provider" style="width:100%; padding:12px; margin-bottom:12px; border:1px solid #333; border-radius:6px; background:#111; color:white; box-sizing:border-box;">
+                        <option value="">Loading providers...</option>
+                    </select>
+                    <input type="text" id="monitor-label" placeholder="Nickname (e.g. Prod OpenAI Key)">
+                    <input type="text" id="monitor-key" placeholder="API Key to Monitor">
+                    <button onclick="addMonitoredApi()">Start Monitoring</button>
+                    <h4 style="margin-top:20px;">Monitored APIs</h4>
+                    <div id="monitor-list" class="api-grid"></div>
                 </div>
             </div>
             
@@ -293,6 +312,137 @@
                 document.getElementById('admin-panel').style.display = 'block';
                     loadPendingRequests();
                     loadAllKeys(); // Add this line here!
+                    loadProviders();
+                    loadMonitoredApis();
+            }
+        }
+
+        function switchAdminTab(tab) {
+            const vaultView = document.getElementById('admin-tab-vault');
+            const monitorView = document.getElementById('admin-tab-monitor');
+            const vaultBtn = document.getElementById('tab-btn-vault');
+            const monitorBtn = document.getElementById('tab-btn-monitor');
+
+            const active = "width:auto; flex:1; background:#FFD700; color:#000;";
+            const inactive = "width:auto; flex:1; background:#222; color:#FFD700;";
+
+            if (tab === 'monitor') {
+                vaultView.style.display = 'none';
+                monitorView.style.display = 'block';
+                vaultBtn.style.cssText = inactive;
+                monitorBtn.style.cssText = active;
+                loadMonitoredApis();
+            } else {
+                vaultView.style.display = 'block';
+                monitorView.style.display = 'none';
+                vaultBtn.style.cssText = active;
+                monitorBtn.style.cssText = inactive;
+            }
+        }
+
+        async function loadProviders() {
+            try {
+                const res = await apiFetch("/admin/monitor/providers");
+                const providers = await res.json();
+                const select = document.getElementById('monitor-provider');
+                select.innerHTML = providers.map(p =>
+                    `<option value="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</option>`
+                ).join('');
+            } catch (e) {
+                console.error("Failed to load providers:", e);
+            }
+        }
+
+        async function addMonitoredApi() {
+            const providerEl = document.getElementById('monitor-provider');
+            const labelEl = document.getElementById('monitor-label');
+            const keyEl = document.getElementById('monitor-key');
+
+            const provider = providerEl.value;
+            const label = labelEl.value.trim();
+            const api_key = keyEl.value.trim();
+
+            if (!provider || !label || !api_key) {
+                alert("Provider, nickname, and API key are all required.");
+                return;
+            }
+
+            try {
+                const res = await apiFetch("/admin/monitor/apis", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider, label, api_key })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    labelEl.value = '';
+                    keyEl.value = '';
+                    loadMonitoredApis();
+                } else {
+                    alert("Failed to add monitor: " + (data.detail || "Unknown error"));
+                }
+            } catch (e) {
+                console.error("Monitor Add Error:", e);
+                alert("System Offline: Backend unreachable.");
+            }
+        }
+
+        async function loadMonitoredApis() {
+            try {
+                const res = await apiFetch("/admin/monitor/apis");
+                const entries = await res.json();
+                const list = document.getElementById('monitor-list');
+
+                if (entries.length === 0) {
+                    list.innerHTML = "<p style='opacity:0.5; grid-column: 1/-1; text-align:center;'>No APIs are being monitored yet.</p>";
+                    return;
+                }
+
+                list.innerHTML = entries.map(e => `
+                    <div class="api-card" id="monitor-card-${e.monitor_id}" style="text-align:left; cursor:default;">
+                        <h3 style="margin:0; color:#FFD700; font-size:1.1rem;">${e.label}</h3>
+                        <p style="font-size:0.7rem; color:#aaa; margin:8px 0;">${e.provider} &middot; <code>${e.masked_key}</code></p>
+                        <div id="monitor-usage-${e.monitor_id}" style="font-size:0.85rem; margin:10px 0; min-height:20px;">-</div>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="refreshMonitorUsage(${e.monitor_id})" style="font-size:0.75rem; padding:8px;">Refresh</button>
+                            <button onclick="deleteMonitoredApi(${e.monitor_id})" style="background:#dc3545; color:white; font-size:0.75rem; padding:8px;">Remove</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error("Monitor Sync Error:", e);
+            }
+        }
+
+        async function refreshMonitorUsage(monitorId) {
+            const target = document.getElementById(`monitor-usage-${monitorId}`);
+            target.innerText = "Fetching usage...";
+            try {
+                const res = await apiFetch(`/admin/monitor/apis/${monitorId}/usage`);
+                const data = await res.json();
+
+                if (res.ok) {
+                    target.innerHTML = `In: <b>${data.input_tokens.toLocaleString()}</b> &middot; Out: <b>${data.output_tokens.toLocaleString()}</b> &middot; Total: <b>${data.total_tokens.toLocaleString()}</b>`;
+                } else {
+                    target.innerHTML = `<span style="color:#dc3545;">${data.detail || "Failed to fetch usage"}</span>`;
+                }
+            } catch (e) {
+                target.innerHTML = `<span style="color:#dc3545;">Network error</span>`;
+            }
+        }
+
+        async function deleteMonitoredApi(monitorId) {
+            if (!confirm("Stop monitoring this API key?")) return;
+            try {
+                const res = await apiFetch(`/admin/monitor/apis/${monitorId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadMonitoredApis();
+                } else {
+                    alert("Failed to remove monitor.");
+                }
+            } catch (e) {
+                alert("System Error: Could not reach the vault.");
             }
         }
     async function loadPendingRequests() {

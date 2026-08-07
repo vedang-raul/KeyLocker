@@ -13,13 +13,17 @@ from jose import JWTError,jwt
 # Internal Imports
 from db.db import get_db, engine, Base
 from models.users import Users
-from models.req import Requests 
+from models.req import Requests
 from models.keys import APIkeys
+from models.monitor import MonitoredAPI
 from schemas.users import UserReg,UserLogin
 from core.mail import get_ses_client
 from core.security import PasswordHasher
-from schemas.keys import KeyReg 
+from schemas.keys import KeyReg
 from schemas.req import ReqReg
+from schemas.monitor import MonitorReg
+from providers.registry import get_provider, list_providers
+from providers.base import ProviderError
 
 
 # Initialize Environment
@@ -123,6 +127,12 @@ def require_same_user(user_id: int, current_user: Users):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only access your own account",
         )
+
+
+def mask_key(key: str) -> str:
+    if len(key) <= 8:
+        return "*" * len(key)
+    return f"{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}"
 
 
 @app.get("/")
@@ -534,3 +544,100 @@ async def delete_api_key(
     await db.delete(key)
     await db.commit()
     return {"message": f"{api_name} has been purged from the vault."}
+
+# --- API Usage Monitoring (separate from the key handout vault) ---
+
+# Admin: List which providers have a usage adapter wired up
+@app.get("/admin/monitor/providers")
+async def get_supported_providers(_admin: Users = Depends(require_admin)):
+    return list_providers()
+
+# Admin: Register an API key to continuously monitor
+@app.post("/admin/monitor/apis")
+async def add_monitored_api(
+    data: MonitorReg,
+    db: AsyncSession = Depends(get_db),
+    admin: Users = Depends(require_admin),
+):
+    if data.provider not in list_providers():
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported provider '{data.provider}'"
+        )
+
+    entry = MonitoredAPI(
+        provider=data.provider,
+        label=data.label,
+        api_key=data.api_key,
+        added_by=admin.emp_id,
+    )
+    db.add(entry)
+    await db.commit()
+    await db.refresh(entry)
+    return {"message": "Monitoring added", "monitor_id": entry.monitor_id}
+
+# Admin: List monitored APIs (keys are masked, never returned in full)
+@app.get("/admin/monitor/apis")
+async def list_monitored_apis(
+    db: AsyncSession = Depends(get_db),
+    _admin: Users = Depends(require_admin),
+):
+    result = await db.execute(select(MonitoredAPI))
+    entries = result.scalars().all()
+    return [
+        {
+            "monitor_id": e.monitor_id,
+            "provider": e.provider,
+            "label": e.label,
+            "masked_key": mask_key(e.api_key),
+        }
+        for e in entries
+    ]
+
+# Admin: On-demand fetch of current usage for one monitored API
+@app.get("/admin/monitor/apis/{monitor_id}/usage")
+async def get_monitored_usage(
+    monitor_id: int,
+    db: AsyncSession = Depends(get_db),
+    _admin: Users = Depends(require_admin),
+):
+    result = await db.execute(
+        select(MonitoredAPI).where(MonitoredAPI.monitor_id == monitor_id)
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Monitored API not found")
+
+    provider = get_provider(entry.provider)
+    try:
+        snapshot = await provider.fetch_usage(entry.api_key)
+    except ProviderError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return {
+        "monitor_id": entry.monitor_id,
+        "label": entry.label,
+        "provider": entry.provider,
+        "input_tokens": snapshot.input_tokens,
+        "output_tokens": snapshot.output_tokens,
+        "total_tokens": snapshot.total_tokens,
+        "requests": snapshot.requests,
+        "period": snapshot.period,
+    }
+
+# Admin: Stop monitoring an API key
+@app.delete("/admin/monitor/apis/{monitor_id}")
+async def delete_monitored_api(
+    monitor_id: int,
+    db: AsyncSession = Depends(get_db),
+    _admin: Users = Depends(require_admin),
+):
+    result = await db.execute(
+        select(MonitoredAPI).where(MonitoredAPI.monitor_id == monitor_id)
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Monitored API not found")
+
+    await db.delete(entry)
+    await db.commit()
+    return {"message": "Monitoring removed"}
