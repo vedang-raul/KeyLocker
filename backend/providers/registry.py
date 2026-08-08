@@ -1,7 +1,6 @@
 from .base import ProviderError, UsageProvider
 from .anthropic_provider import AnthropicUsageProvider
 from .gemini_provider import GeminiUsageProvider
-from .groq_provider import GroqUsageProvider
 from .grok_provider import GrokUsageProvider
 from .openai_provider import OpenAIUsageProvider
 
@@ -12,7 +11,6 @@ _PROVIDERS: dict[str, UsageProvider] = {
         AnthropicUsageProvider(),
         GeminiUsageProvider(),
         GrokUsageProvider(),
-        GroqUsageProvider(),
     )
 }
 
