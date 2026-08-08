@@ -341,13 +341,21 @@
             }
         }
 
+        const PROVIDER_LABELS = {
+            openai: "OpenAI",
+            anthropic: "Anthropic (Claude)",
+            gemini: "Google Gemini",
+            grok: "xAI (Grok)",
+            groq: "Groq (fast inference — console.groq.com)",
+        };
+
         async function loadProviders() {
             try {
                 const res = await apiFetch("/admin/monitor/providers");
                 const providers = await res.json();
                 const select = document.getElementById('monitor-provider');
                 select.innerHTML = providers.map(p =>
-                    `<option value="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</option>`
+                    `<option value="${p}">${PROVIDER_LABELS[p] || (p.charAt(0).toUpperCase() + p.slice(1))}</option>`
                 ).join('');
             } catch (e) {
                 console.error("Failed to load providers:", e);
