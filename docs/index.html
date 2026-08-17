@@ -183,8 +183,14 @@
                 </div>
 
                 <div id="admin-tab-analytics" style="display:none;">
-                    <div class="analytics-demo-banner">
-                        DEMO DATA &mdash; this dashboard is showing a synthetic dataset for presentation. It will be wired to live provider usage at deployment.
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+                        <button onclick="switchAnalyticsMode('demo')" id="analytics-mode-demo" style="width:auto; padding:8px 16px; background:#FFD700; color:#000;">Demo Data</button>
+                        <button onclick="switchAnalyticsMode('live')" id="analytics-mode-live" style="width:auto; padding:8px 16px; background:#222; color:#FFD700;">Live Data</button>
+                        <button onclick="renderAnalyticsDashboard()" style="width:auto; padding:8px 16px; background:#222; color:#FFD700; margin-left:auto;">Refresh</button>
+                    </div>
+
+                    <div class="analytics-demo-banner" id="analytics-banner">
+                        DEMO DATA &mdash; this dashboard is showing a synthetic dataset for presentation. Switch to "Live Data" to pull real numbers from your Monitoring tab entries.
                     </div>
 
                     <div class="kpi-grid" id="analytics-kpi-grid"></div>
@@ -1011,10 +1017,16 @@
     }
 
     function fmtCurrency(n) {
+        if (n === null || n === undefined) return "—";
         return "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     function fmtNumber(n) {
+        if (n === null || n === undefined) return "—";
         return n.toLocaleString();
+    }
+
+    function renderChartPlaceholder(containerId, message) {
+        document.getElementById(containerId).innerHTML = `<p style="opacity:0.5; text-align:center; padding:30px 10px; font-size:0.85rem;">${message}</p>`;
     }
 
     function showChartTooltip(evt, html) {
@@ -1030,14 +1042,15 @@
 
     function renderKPICards(data) {
         const t = data.totals;
-        const trendClass = t.requestsTrendPct > 0 ? 'up' : (t.requestsTrendPct < 0 ? 'down' : 'flat');
+        const hasTrend = t.requestsTrendPct !== null && t.requestsTrendPct !== undefined;
+        const trendClass = !hasTrend ? 'flat' : (t.requestsTrendPct > 0 ? 'up' : (t.requestsTrendPct < 0 ? 'down' : 'flat'));
         const trendArrow = t.requestsTrendPct > 0 ? '▲' : (t.requestsTrendPct < 0 ? '▼' : '—');
 
         const cards = [
-            { label: "Total Estimated Spend", value: fmtCurrency(t.spend), trend: `Current billing cycle` , trendClass: 'flat'},
-            { label: "Total API Calls", value: fmtNumber(t.requests), trend: `${trendArrow} ${Math.abs(t.requestsTrendPct)}% vs prior period`, trendClass },
+            { label: "Total Estimated Spend", value: fmtCurrency(t.spend), trend: t.spend === null ? "USD pricing not wired up yet" : "Current billing cycle", trendClass: 'flat'},
+            { label: "Total API Calls", value: fmtNumber(t.requests), trend: hasTrend ? `${trendArrow} ${Math.abs(t.requestsTrendPct)}% vs prior period` : "No prior-period baseline yet", trendClass },
             { label: "Active API Keys", value: `${t.activeKeys} / ${t.activeKeys + t.revokedKeys}`, trend: `${t.revokedKeys} suspended`, trendClass: t.revokedKeys > 0 ? 'down' : 'flat' },
-            { label: "Anomalies / Spike Alerts", value: fmtNumber(t.anomalies), trend: t.anomalies > 0 ? "Spike detected in traffic" : "No anomalies detected", trendClass: t.anomalies > 0 ? 'down' : 'flat' },
+            { label: "Anomalies / Spike Alerts", value: fmtNumber(t.anomalies), trend: t.anomalies === null ? "Requires usage history" : (t.anomalies > 0 ? "Spike detected in traffic" : "No anomalies detected"), trendClass: t.anomalies > 0 ? 'down' : 'flat' },
         ];
 
         document.getElementById('analytics-kpi-grid').innerHTML = cards.map(c => `
@@ -1108,6 +1121,10 @@
     }
 
     function renderProviderDonut(data) {
+        if (data.providerBreakdown.length === 0) {
+            renderChartPlaceholder('chart-provider-donut', "No usage data yet — add and refresh a monitor first.");
+            return;
+        }
         const total = data.providerBreakdown.reduce((s, p) => s + p.requests, 0);
         const cx = 90, cy = 90, r = 65, strokeW = 26;
         const circumference = 2 * Math.PI * r;
@@ -1165,7 +1182,12 @@
     }
 
     function renderUsageTable(data) {
-        const statusClass = { "Healthy": "healthy", "Near Quota": "near-quota", "Suspended": "suspended" };
+        if (data.keys.length === 0) {
+            document.getElementById('analytics-usage-tbody').innerHTML =
+                `<tr><td colspan="7" style="text-align:center; opacity:0.5; padding:20px;">No monitored APIs yet — add one in the Monitoring tab.</td></tr>`;
+            return;
+        }
+        const statusClass = { "Healthy": "healthy", "Near Quota": "near-quota", "Suspended": "suspended", "Error": "suspended" };
         document.getElementById('analytics-usage-tbody').innerHTML = data.keys.map(k => `
             <tr>
                 <td><code>${k.maskedKey}</code></td>
@@ -1179,13 +1201,106 @@
         `).join('');
     }
 
-    function renderAnalyticsDashboard() {
-        const data = generateMockUsageData();
+    let analyticsMode = 'demo';
+
+    function switchAnalyticsMode(mode) {
+        analyticsMode = mode;
+        const active = "width:auto; padding:8px 16px; background:#FFD700; color:#000;";
+        const inactive = "width:auto; padding:8px 16px; background:#222; color:#FFD700;";
+        document.getElementById('analytics-mode-demo').style.cssText = mode === 'demo' ? active : inactive;
+        document.getElementById('analytics-mode-live').style.cssText = mode === 'live' ? active : inactive;
+        renderAnalyticsDashboard();
+    }
+
+    // Pulls a real, current snapshot from the already-built monitoring
+    // endpoints. Unlike the demo dataset, this has no historical storage
+    // (only "right now"), no per-model breakdown, and no USD pricing —
+    // those fields come back null/empty and the render functions show
+    // "—" / a placeholder instead of a fabricated number.
+    async function fetchLiveUsageData() {
+        const listRes = await apiFetch('/admin/monitor/apis');
+        if (!listRes.ok) throw new Error('Failed to load monitored APIs');
+        const monitors = await listRes.json();
+
+        const usageResults = await Promise.allSettled(
+            monitors.map(m => apiFetch(`/admin/monitor/apis/${m.monitor_id}/usage`).then(async (res) => {
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Usage fetch failed');
+                return res.json();
+            }))
+        );
+
+        const keys = monitors.map((m, i) => {
+            const result = usageResults[i];
+            if (result.status === 'fulfilled') {
+                const u = result.value;
+                return {
+                    maskedKey: m.masked_key, provider: m.provider, tag: m.label,
+                    requests: u.requests ?? null, promptTokens: u.input_tokens, completionTokens: u.output_tokens,
+                    spend: null, status: "Healthy",
+                };
+            }
+            return {
+                maskedKey: m.masked_key, provider: m.provider, tag: m.label,
+                requests: null, promptTokens: null, completionTokens: null, spend: null, status: "Error",
+            };
+        });
+
+        const healthyKeys = keys.filter(k => k.status === 'Healthy');
+        const providerBreakdown = [...new Set(healthyKeys.map(k => k.provider))].map(provider => {
+            const providerKeys = healthyKeys.filter(k => k.provider === provider);
+            return {
+                provider,
+                requests: providerKeys.reduce((s, k) => s + (k.requests || (k.promptTokens + k.completionTokens) || 0), 0),
+                spend: null,
+            };
+        }).filter(p => p.requests > 0);
+
+        return {
+            mode: 'live',
+            keys,
+            providerBreakdown,
+            modelBreakdown: [],
+            timeseries: [],
+            totals: {
+                spend: null,
+                requests: healthyKeys.reduce((s, k) => s + (k.requests || 0), 0),
+                requestsTrendPct: null,
+                activeKeys: keys.filter(k => k.status === 'Healthy').length,
+                revokedKeys: keys.filter(k => k.status === 'Error').length,
+                anomalies: null,
+            },
+        };
+    }
+
+    async function renderAnalyticsDashboard() {
+        const banner = document.getElementById('analytics-banner');
+
+        let data;
+        if (analyticsMode === 'live') {
+            banner.innerHTML = "Loading live data from your Monitoring tab entries...";
+            try {
+                data = await fetchLiveUsageData();
+                banner.innerHTML = "LIVE DATA &mdash; pulled just now from your configured monitors. Historical trend and per-model breakdown aren't wired up yet (shown as —).";
+            } catch (e) {
+                banner.innerHTML = `<span style="color:#dc3545;">Failed to load live data: ${e.message}</span>`;
+                return;
+            }
+        } else {
+            banner.innerHTML = "DEMO DATA &mdash; this dashboard is showing a synthetic dataset for presentation. Switch to \"Live Data\" to pull real numbers from your Monitoring tab entries.";
+            data = generateMockUsageData();
+        }
+
         renderKPICards(data);
-        renderTimeSeriesChart(data);
         renderProviderDonut(data);
-        renderModelBars(data);
         renderUsageTable(data);
+
+        if (data.mode === 'live') {
+            renderChartPlaceholder('chart-timeseries', "Historical trend requires storing periodic usage snapshots — not wired up yet.");
+            renderChartPlaceholder('chart-model-bars', "Per-model breakdown requires additional provider work — not wired up yet.");
+        } else {
+            renderTimeSeriesChart(data);
+            renderModelBars(data);
+        }
     }
     </script>
 </body>
