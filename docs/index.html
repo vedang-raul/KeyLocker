@@ -57,6 +57,38 @@
         }
         
         .main-dashboard { max-width: 850px !important; } /* Expanded state */
+        .main-dashboard.analytics-mode { max-width: 1400px !important; width: 94vw; }
+
+        /* --- Usage Analytics Dashboard --- */
+        .analytics-demo-banner {
+            background: rgba(255,215,0,0.08); border: 1px dashed #FFD700; color: #FFD700;
+            font-size: 0.8rem; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px;
+        }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,215,0,0.1); border-radius: 12px; padding: 18px; }
+        .kpi-card .kpi-label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-card .kpi-value { font-size: 1.8rem; color: #FFD700; font-weight: bold; margin-top: 6px; }
+        .kpi-card .kpi-trend { font-size: 0.75rem; margin-top: 6px; }
+        .kpi-trend.up { color: #28a745; }
+        .kpi-trend.down { color: #dc3545; }
+        .kpi-trend.flat { color: #aaa; }
+
+        .analytics-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .chart-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,215,0,0.1); border-radius: 12px; padding: 20px; }
+        .chart-card h4 { margin: 0 0 15px 0; color: #FFD700; font-size: 0.95rem; }
+
+        .analytics-table-wrap { overflow-x: auto; }
+        .analytics-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .analytics-table th { text-align: left; color: #aaa; font-weight: normal; padding: 8px 10px; border-bottom: 1px solid rgba(255,215,0,0.2); white-space: nowrap; }
+        .analytics-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
+        .status-pill { padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: bold; }
+        .status-pill.healthy { background: rgba(40,167,69,0.15); color: #28a745; }
+        .status-pill.near-quota { background: rgba(255,193,7,0.15); color: #ffc107; }
+        .status-pill.suspended { background: rgba(220,53,69,0.15); color: #dc3545; }
+
+        .chart-tooltip { position: fixed; background: #111; border: 1px solid #FFD700; border-radius: 6px; padding: 6px 10px; font-size: 0.72rem; pointer-events: none; z-index: 2000; display: none; }
+
+        @media (max-width: 900px) { .analytics-charts-grid { grid-template-columns: 1fr; } }
 
         h2 { color: #FFD700; text-align: center; margin-bottom: 1.5rem; }
         input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #333; border-radius: 6px; background: #111; color: white; box-sizing: border-box; }
@@ -120,6 +152,7 @@
                 <div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
                     <button onclick="switchAdminTab('vault')" id="tab-btn-vault" style="width:auto; flex:1;">Vault</button>
                     <button onclick="switchAdminTab('monitor')" id="tab-btn-monitor" style="width:auto; flex:1; background:#222; color:#FFD700;">Monitoring</button>
+                    <button onclick="switchAdminTab('analytics')" id="tab-btn-analytics" style="width:auto; flex:1; background:#222; color:#FFD700;">Usage Analytics</button>
                 </div>
 
                 <div id="admin-tab-vault">
@@ -148,11 +181,62 @@
                     <h4 style="margin-top:20px;">Monitored APIs</h4>
                     <div id="monitor-list" class="api-grid"></div>
                 </div>
+
+                <div id="admin-tab-analytics" style="display:none;">
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+                        <button onclick="switchAnalyticsMode('demo')" id="analytics-mode-demo" style="width:auto; padding:8px 16px; background:#FFD700; color:#000;">Demo Data</button>
+                        <button onclick="switchAnalyticsMode('live')" id="analytics-mode-live" style="width:auto; padding:8px 16px; background:#222; color:#FFD700;">Live Data</button>
+                        <button onclick="renderAnalyticsDashboard()" style="width:auto; padding:8px 16px; background:#222; color:#FFD700; margin-left:auto;">Refresh</button>
+                    </div>
+
+                    <div class="analytics-demo-banner" id="analytics-banner">
+                        DEMO DATA &mdash; this dashboard is showing a synthetic dataset for presentation. Switch to "Live Data" to pull real numbers from your Monitoring tab entries.
+                    </div>
+
+                    <div class="kpi-grid" id="analytics-kpi-grid"></div>
+
+                    <div class="analytics-charts-grid">
+                        <div class="chart-card" style="grid-column: 1 / -1;">
+                            <h4>Requests &amp; Estimated Cost (Last 14 Days)</h4>
+                            <div id="chart-timeseries"></div>
+                        </div>
+                        <div class="chart-card">
+                            <h4>Provider Breakdown</h4>
+                            <div id="chart-provider-donut"></div>
+                        </div>
+                        <div class="chart-card">
+                            <h4>Model Distribution</h4>
+                            <div id="chart-model-bars"></div>
+                        </div>
+                    </div>
+
+                    <div class="chart-card" style="margin-top:20px;">
+                        <h4>Key &amp; Route Usage</h4>
+                        <div class="analytics-table-wrap">
+                            <table class="analytics-table" id="analytics-usage-table">
+                                <thead>
+                                    <tr>
+                                        <th>API Key</th>
+                                        <th>Service / Tag</th>
+                                        <th>Requests</th>
+                                        <th>Prompt Tokens</th>
+                                        <th>Completion Tokens</th>
+                                        <th>Est. Spend</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analytics-usage-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
+
             <button onclick="location.reload()" style="background:#222; color:white; margin-top:30px; width:auto;">Logout</button>
         </div>
     </div>
+
+    <div id="chart-tooltip" class="chart-tooltip"></div>
 
     <div id="api-modal" class="modal-overlay">
         <div class="modal-content">
@@ -318,28 +402,44 @@
             }
         }
 
+        let analyticsRendered = false;
+
         function switchAdminTab(tab) {
-            const vaultView = document.getElementById('admin-tab-vault');
-            const monitorView = document.getElementById('admin-tab-monitor');
-            const vaultBtn = document.getElementById('tab-btn-vault');
-            const monitorBtn = document.getElementById('tab-btn-monitor');
+            const views = {
+                vault: document.getElementById('admin-tab-vault'),
+                monitor: document.getElementById('admin-tab-monitor'),
+                analytics: document.getElementById('admin-tab-analytics'),
+            };
+            const btns = {
+                vault: document.getElementById('tab-btn-vault'),
+                monitor: document.getElementById('tab-btn-monitor'),
+                analytics: document.getElementById('tab-btn-analytics'),
+            };
 
             const active = "width:auto; flex:1; background:#FFD700; color:#000;";
             const inactive = "width:auto; flex:1; background:#222; color:#FFD700;";
 
+            Object.keys(views).forEach(key => {
+                views[key].style.display = key === tab ? 'block' : 'none';
+                btns[key].style.cssText = key === tab ? active : inactive;
+            });
+
+            document.getElementById('main-container').classList.toggle('analytics-mode', tab === 'analytics');
+
             if (tab === 'monitor') {
-                vaultView.style.display = 'none';
-                monitorView.style.display = 'block';
-                vaultBtn.style.cssText = inactive;
-                monitorBtn.style.cssText = active;
                 loadMonitoredApis();
-            } else {
-                vaultView.style.display = 'block';
-                monitorView.style.display = 'none';
-                vaultBtn.style.cssText = active;
-                monitorBtn.style.cssText = inactive;
+            } else if (tab === 'analytics' && !analyticsRendered) {
+                analyticsRendered = true;
+                renderAnalyticsDashboard();
             }
         }
+
+        const PROVIDER_LABELS = {
+            openai: "OpenAI",
+            anthropic: "Anthropic (Claude)",
+            gemini: "Google Gemini",
+            grok: "xAI (Grok)",
+        };
 
         async function loadProviders() {
             try {
@@ -347,7 +447,7 @@
                 const providers = await res.json();
                 const select = document.getElementById('monitor-provider');
                 select.innerHTML = providers.map(p =>
-                    `<option value="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</option>`
+                    `<option value="${p}">${PROVIDER_LABELS[p] || (p.charAt(0).toUpperCase() + p.slice(1))}</option>`
                 ).join('');
             } catch (e) {
                 console.error("Failed to load providers:", e);
@@ -775,6 +875,431 @@
             }
         } catch (e) {
             alert("System Error: Could not reach the vault.");
+        }
+    }
+
+    // =====================================================================
+    // Usage Analytics Dashboard
+    //
+    // DEMO DATA: everything below is a synthetic dataset generated in the
+    // browser for presentation purposes. At deployment, swap
+    // generateMockUsageData() for a real call against /admin/monitor/*
+    // (and any per-key/per-route usage endpoints added later) — the render
+    // functions below (renderKPICards, renderTimeSeriesChart, etc.) only
+    // depend on the shapes documented here, not on how the data was sourced.
+    //
+    // Shapes (documented as JSDoc typedefs since this file is vanilla JS,
+    // not TypeScript):
+    //
+    // @typedef {Object} CostMetric
+    // @property {string} model            e.g. "gpt-4o-mini"
+    // @property {number} promptPricePerM  USD per 1M prompt tokens
+    // @property {number} completionPricePerM USD per 1M completion tokens
+    //
+    // @typedef {Object} ApiUsageLog
+    // @property {string} date             ISO date (YYYY-MM-DD)
+    // @property {number} requests
+    // @property {number} cost             USD, estimated
+    // @property {boolean} [isSpike]        flagged anomaly day
+    //
+    // @typedef {Object} ProviderSummary
+    // @property {string} provider         "openai" | "anthropic" | "gemini" | "grok"
+    // @property {number} requests
+    // @property {number} spend
+    //
+    // @typedef {Object} KeyUsageBreakdown
+    // @property {string} maskedKey
+    // @property {string} provider
+    // @property {string} tag              service/user label
+    // @property {number} requests
+    // @property {number} promptTokens
+    // @property {number} completionTokens
+    // @property {number} spend
+    // @property {"Healthy"|"Near Quota"|"Suspended"} status
+    // =====================================================================
+
+    const MODEL_CATALOG = [
+        { model: "gpt-4o-mini", provider: "openai", promptPricePerM: 0.15, completionPricePerM: 0.60 },
+        { model: "gpt-4o", provider: "openai", promptPricePerM: 2.50, completionPricePerM: 10.00 },
+        { model: "claude-3-5-sonnet-20241022", provider: "anthropic", promptPricePerM: 3.00, completionPricePerM: 15.00 },
+        { model: "claude-3-5-haiku-20241022", provider: "anthropic", promptPricePerM: 0.80, completionPricePerM: 4.00 },
+        { model: "gemini-1.5-pro", provider: "gemini", promptPricePerM: 1.25, completionPricePerM: 5.00 },
+        { model: "gemini-1.5-flash", provider: "gemini", promptPricePerM: 0.075, completionPricePerM: 0.30 },
+        { model: "grok-2", provider: "grok", promptPricePerM: 2.00, completionPricePerM: 10.00 },
+    ];
+
+    const PROVIDER_COLORS = { openai: "#FFD700", anthropic: "#c586ff", gemini: "#4fc3f7", grok: "#ff7043" };
+
+    // Simple seeded PRNG so the demo dataset is stable across reloads
+    // instead of jittering every refresh.
+    function seededRandom(seed) {
+        let s = seed;
+        return function () {
+            s = (s * 1103515245 + 12345) & 0x7fffffff;
+            return s / 0x7fffffff;
+        };
+    }
+
+    function generateMockUsageData() {
+        const rng = seededRandom(42);
+        const DAYS = 14;
+        const SPIKE_DAY_INDEX = 10; // day that gets the 5x anomaly
+
+        const today = new Date('2026-08-17T00:00:00Z');
+        const timeseries = [];
+        for (let i = DAYS - 1; i >= 0; i--) {
+            const d = new Date(today);
+            d.setUTCDate(d.getUTCDate() - i);
+            const dayIndex = DAYS - 1 - i;
+            const baseRequests = 800 + Math.floor(rng() * 300);
+            const isSpike = dayIndex === SPIKE_DAY_INDEX;
+            const requests = isSpike ? baseRequests * 5 : baseRequests;
+            const costPerRequest = 0.008 + rng() * 0.004;
+            timeseries.push({
+                date: d.toISOString().slice(0, 10),
+                requests,
+                cost: Math.round(requests * costPerRequest * 100) / 100,
+                isSpike,
+            });
+        }
+
+        const keys = [
+            { maskedKey: "sk-p****************UVRe", provider: "openai", tag: "prod-checkout-service", status: "Healthy" },
+            { maskedKey: "sk-a****************91Kx", provider: "anthropic", tag: "internal-support-bot", status: "Healthy" },
+            { maskedKey: "sk-p****************77Qm", provider: "openai", tag: "marketing-content-gen", status: "Near Quota" },
+            { maskedKey: "aiza****************3fLp", provider: "gemini", tag: "data-pipeline-summaries", status: "Healthy" },
+            { maskedKey: "xai-****************9Bwz", provider: "grok", tag: "growth-experiments", status: "Suspended" },
+        ].map((k) => {
+            const requests = 400 + Math.floor(rng() * 4000);
+            const promptTokens = requests * (300 + Math.floor(rng() * 400));
+            const completionTokens = requests * (100 + Math.floor(rng() * 250));
+            const models = MODEL_CATALOG.filter((m) => m.provider === k.provider);
+            const m = models[Math.floor(rng() * models.length)];
+            const spend = (promptTokens / 1e6) * m.promptPricePerM + (completionTokens / 1e6) * m.completionPricePerM;
+            return { ...k, requests, promptTokens, completionTokens, spend: Math.round(spend * 100) / 100 };
+        });
+
+        const providerBreakdown = Object.keys(PROVIDER_COLORS).map((provider) => {
+            const providerKeys = keys.filter((k) => k.provider === provider);
+            return {
+                provider,
+                requests: providerKeys.reduce((sum, k) => sum + k.requests, 0),
+                spend: Math.round(providerKeys.reduce((sum, k) => sum + k.spend, 0) * 100) / 100,
+            };
+        }).filter((p) => p.requests > 0);
+
+        const modelBreakdown = MODEL_CATALOG.map((m) => {
+            const weight = 0.3 + rng() * 1.5;
+            const requests = Math.floor(200 * weight);
+            const tokens = requests * (400 + Math.floor(rng() * 600));
+            return { model: m.model, provider: m.provider, requests, tokens };
+        }).sort((a, b) => b.requests - a.requests);
+
+        const totalSpend = Math.round(providerBreakdown.reduce((s, p) => s + p.spend, 0) * 100) / 100;
+        const totalRequests = timeseries.reduce((s, t) => s + t.requests, 0);
+        const prevPeriodRequests = Math.round(totalRequests / 1.18); // synthetic prior-period baseline
+        const requestsTrendPct = Math.round(((totalRequests - prevPeriodRequests) / prevPeriodRequests) * 1000) / 10;
+
+        return {
+            timeseries,
+            keys,
+            providerBreakdown,
+            modelBreakdown,
+            totals: {
+                spend: totalSpend,
+                requests: totalRequests,
+                requestsTrendPct,
+                activeKeys: keys.filter((k) => k.status !== "Suspended").length,
+                revokedKeys: keys.filter((k) => k.status === "Suspended").length,
+                anomalies: timeseries.filter((t) => t.isSpike).length,
+            },
+        };
+    }
+
+    function fmtCurrency(n) {
+        if (n === null || n === undefined) return "—";
+        return "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function fmtNumber(n) {
+        if (n === null || n === undefined) return "—";
+        return n.toLocaleString();
+    }
+
+    function renderChartPlaceholder(containerId, message) {
+        document.getElementById(containerId).innerHTML = `<p style="opacity:0.5; text-align:center; padding:30px 10px; font-size:0.85rem;">${message}</p>`;
+    }
+
+    function showChartTooltip(evt, html) {
+        const tip = document.getElementById('chart-tooltip');
+        tip.innerHTML = html;
+        tip.style.display = 'block';
+        tip.style.left = (evt.clientX + 14) + 'px';
+        tip.style.top = (evt.clientY + 14) + 'px';
+    }
+    function hideChartTooltip() {
+        document.getElementById('chart-tooltip').style.display = 'none';
+    }
+
+    function renderKPICards(data) {
+        const t = data.totals;
+        const hasTrend = t.requestsTrendPct !== null && t.requestsTrendPct !== undefined;
+        const trendClass = !hasTrend ? 'flat' : (t.requestsTrendPct > 0 ? 'up' : (t.requestsTrendPct < 0 ? 'down' : 'flat'));
+        const trendArrow = t.requestsTrendPct > 0 ? '▲' : (t.requestsTrendPct < 0 ? '▼' : '—');
+
+        const cards = [
+            { label: "Total Estimated Spend", value: fmtCurrency(t.spend), trend: t.spend === null ? "USD pricing not wired up yet" : "Current billing cycle", trendClass: 'flat'},
+            { label: "Total API Calls", value: fmtNumber(t.requests), trend: hasTrend ? `${trendArrow} ${Math.abs(t.requestsTrendPct)}% vs prior period` : "No prior-period baseline yet", trendClass },
+            { label: "Active API Keys", value: `${t.activeKeys} / ${t.activeKeys + t.revokedKeys}`, trend: `${t.revokedKeys} suspended`, trendClass: t.revokedKeys > 0 ? 'down' : 'flat' },
+            { label: "Anomalies / Spike Alerts", value: fmtNumber(t.anomalies), trend: t.anomalies === null ? "Requires usage history" : (t.anomalies > 0 ? "Spike detected in traffic" : "No anomalies detected"), trendClass: t.anomalies > 0 ? 'down' : 'flat' },
+        ];
+
+        document.getElementById('analytics-kpi-grid').innerHTML = cards.map(c => `
+            <div class="kpi-card">
+                <div class="kpi-label">${c.label}</div>
+                <div class="kpi-value">${c.value}</div>
+                <div class="kpi-trend ${c.trendClass}">${c.trend}</div>
+            </div>
+        `).join('');
+    }
+
+    function renderTimeSeriesChart(data) {
+        const series = data.timeseries;
+        const W = 900, H = 260, PAD_L = 40, PAD_B = 30, PAD_T = 15, PAD_R = 15;
+        const plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
+
+        const maxRequests = Math.max(...series.map(s => s.requests));
+        const maxCost = Math.max(...series.map(s => s.cost));
+
+        const xFor = (i) => PAD_L + (i / (series.length - 1)) * plotW;
+        const yForRequests = (v) => PAD_T + plotH - (v / maxRequests) * plotH;
+        const yForCost = (v) => PAD_T + plotH - (v / maxCost) * plotH;
+
+        const areaPoints = series.map((s, i) => `${xFor(i)},${yForRequests(s.requests)}`).join(' ');
+        const areaPath = `M${PAD_L},${PAD_T + plotH} L${areaPoints} L${xFor(series.length - 1)},${PAD_T + plotH} Z`;
+        const costPath = 'M' + series.map((s, i) => `${xFor(i)},${yForCost(s.cost)}`).join(' L');
+
+        const spikeIdx = series.findIndex(s => s.isSpike);
+
+        const dots = series.map((s, i) => `
+            <circle cx="${xFor(i)}" cy="${yForRequests(s.requests)}" r="4" fill="${s.isSpike ? '#dc3545' : '#FFD700'}"
+                onmousemove="showChartTooltip(event, '${s.date}<br>Requests: ${fmtNumber(s.requests)}<br>Cost: ${fmtCurrency(s.cost)}${s.isSpike ? '<br><b style=\'color:#dc3545\'>Spike detected</b>' : ''}')"
+                onmouseleave="hideChartTooltip()" style="cursor:pointer;" />
+        `).join('');
+
+        const xLabels = series.map((s, i) => {
+            if (i % 2 !== 0 && i !== series.length - 1) return '';
+            const label = s.date.slice(5);
+            return `<text x="${xFor(i)}" y="${H - 8}" font-size="9" fill="#888" text-anchor="middle">${label}</text>`;
+        }).join('');
+
+        const spikeMarker = spikeIdx >= 0 ? `
+            <line x1="${xFor(spikeIdx)}" y1="${PAD_T}" x2="${xFor(spikeIdx)}" y2="${PAD_T + plotH}" stroke="#dc3545" stroke-width="1" stroke-dasharray="4,3" />
+            <text x="${xFor(spikeIdx)}" y="${PAD_T - 4}" font-size="9" fill="#dc3545" text-anchor="middle">5x SPIKE</text>
+        ` : '';
+
+        document.getElementById('chart-timeseries').innerHTML = `
+            <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto;">
+                <defs>
+                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#FFD700" stop-opacity="0.35" />
+                        <stop offset="100%" stop-color="#FFD700" stop-opacity="0.02" />
+                    </linearGradient>
+                </defs>
+                <path d="${areaPath}" fill="url(#areaGradient)" stroke="none" />
+                <polyline points="${areaPoints}" fill="none" stroke="#FFD700" stroke-width="2" />
+                <path d="${costPath}" fill="none" stroke="#c586ff" stroke-width="1.5" stroke-dasharray="5,3" />
+                ${spikeMarker}
+                ${dots}
+                ${xLabels}
+            </svg>
+            <div style="display:flex; gap:20px; margin-top:10px; font-size:0.75rem; color:#aaa;">
+                <span><span style="display:inline-block; width:10px; height:10px; background:#FFD700; border-radius:2px; margin-right:5px;"></span>Requests</span>
+                <span><span style="display:inline-block; width:10px; height:2px; background:#c586ff; margin-right:5px; vertical-align:middle;"></span>Estimated Cost (USD)</span>
+                <span><span style="display:inline-block; width:10px; height:10px; background:#dc3545; border-radius:50%; margin-right:5px;"></span>Anomaly</span>
+            </div>
+        `;
+    }
+
+    function renderProviderDonut(data) {
+        if (data.providerBreakdown.length === 0) {
+            renderChartPlaceholder('chart-provider-donut', "No usage data yet — add and refresh a monitor first.");
+            return;
+        }
+        const total = data.providerBreakdown.reduce((s, p) => s + p.requests, 0);
+        const cx = 90, cy = 90, r = 65, strokeW = 26;
+        const circumference = 2 * Math.PI * r;
+
+        let offset = 0;
+        const segments = data.providerBreakdown.map((p) => {
+            const fraction = p.requests / total;
+            const dash = fraction * circumference;
+            const seg = `
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${PROVIDER_COLORS[p.provider]}"
+                    stroke-width="${strokeW}" stroke-dasharray="${dash} ${circumference - dash}"
+                    stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"
+                    onmousemove="showChartTooltip(event, '${p.provider}<br>Requests: ${fmtNumber(p.requests)}<br>Spend: ${fmtCurrency(p.spend)}<br>${Math.round(fraction * 1000) / 10}%')"
+                    onmouseleave="hideChartTooltip()" style="cursor:pointer;" />
+            `;
+            offset += dash;
+            return seg;
+        }).join('');
+
+        const legend = data.providerBreakdown.map(p => `
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem; margin-bottom:6px;">
+                <span style="width:10px; height:10px; border-radius:50%; background:${PROVIDER_COLORS[p.provider]}; display:inline-block;"></span>
+                <span style="text-transform:capitalize;">${p.provider}</span>
+                <span style="margin-left:auto; color:#aaa;">${Math.round((p.requests / total) * 1000) / 10}%</span>
+            </div>
+        `).join('');
+
+        document.getElementById('chart-provider-donut').innerHTML = `
+            <div style="display:flex; align-items:center; gap:25px; flex-wrap:wrap;">
+                <svg viewBox="0 0 180 180" style="width:180px; height:180px; flex-shrink:0;">${segments}</svg>
+                <div style="flex:1; min-width:140px;">${legend}</div>
+            </div>
+        `;
+    }
+
+    function renderModelBars(data) {
+        const models = data.modelBreakdown;
+        const maxRequests = Math.max(...models.map(m => m.requests));
+
+        const rows = models.map(m => `
+            <div style="margin-bottom:12px;"
+                onmousemove="showChartTooltip(event, '${m.model}<br>Requests: ${fmtNumber(m.requests)}<br>Tokens: ${fmtNumber(m.tokens)}')"
+                onmouseleave="hideChartTooltip()">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px;">
+                    <span>${m.model}</span>
+                    <span style="color:#aaa;">${fmtNumber(m.requests)}</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.06); border-radius:4px; height:8px; cursor:pointer;">
+                    <div style="width:${(m.requests / maxRequests) * 100}%; height:100%; background:${PROVIDER_COLORS[m.provider]}; border-radius:4px;"></div>
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('chart-model-bars').innerHTML = rows;
+    }
+
+    function renderUsageTable(data) {
+        if (data.keys.length === 0) {
+            document.getElementById('analytics-usage-tbody').innerHTML =
+                `<tr><td colspan="7" style="text-align:center; opacity:0.5; padding:20px;">No monitored APIs yet — add one in the Monitoring tab.</td></tr>`;
+            return;
+        }
+        const statusClass = { "Healthy": "healthy", "Near Quota": "near-quota", "Suspended": "suspended", "Error": "suspended" };
+        document.getElementById('analytics-usage-tbody').innerHTML = data.keys.map(k => `
+            <tr>
+                <td><code>${k.maskedKey}</code></td>
+                <td>${k.tag}</td>
+                <td>${fmtNumber(k.requests)}</td>
+                <td>${fmtNumber(k.promptTokens)}</td>
+                <td>${fmtNumber(k.completionTokens)}</td>
+                <td>${fmtCurrency(k.spend)}</td>
+                <td><span class="status-pill ${statusClass[k.status]}">${k.status}</span></td>
+            </tr>
+        `).join('');
+    }
+
+    let analyticsMode = 'demo';
+
+    function switchAnalyticsMode(mode) {
+        analyticsMode = mode;
+        const active = "width:auto; padding:8px 16px; background:#FFD700; color:#000;";
+        const inactive = "width:auto; padding:8px 16px; background:#222; color:#FFD700;";
+        document.getElementById('analytics-mode-demo').style.cssText = mode === 'demo' ? active : inactive;
+        document.getElementById('analytics-mode-live').style.cssText = mode === 'live' ? active : inactive;
+        renderAnalyticsDashboard();
+    }
+
+    // Pulls a real, current snapshot from the already-built monitoring
+    // endpoints. Unlike the demo dataset, this has no historical storage
+    // (only "right now"), no per-model breakdown, and no USD pricing —
+    // those fields come back null/empty and the render functions show
+    // "—" / a placeholder instead of a fabricated number.
+    async function fetchLiveUsageData() {
+        const listRes = await apiFetch('/admin/monitor/apis');
+        if (!listRes.ok) throw new Error('Failed to load monitored APIs');
+        const monitors = await listRes.json();
+
+        const usageResults = await Promise.allSettled(
+            monitors.map(m => apiFetch(`/admin/monitor/apis/${m.monitor_id}/usage`).then(async (res) => {
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Usage fetch failed');
+                return res.json();
+            }))
+        );
+
+        const keys = monitors.map((m, i) => {
+            const result = usageResults[i];
+            if (result.status === 'fulfilled') {
+                const u = result.value;
+                return {
+                    maskedKey: m.masked_key, provider: m.provider, tag: m.label,
+                    requests: u.requests ?? null, promptTokens: u.input_tokens, completionTokens: u.output_tokens,
+                    spend: null, status: "Healthy",
+                };
+            }
+            return {
+                maskedKey: m.masked_key, provider: m.provider, tag: m.label,
+                requests: null, promptTokens: null, completionTokens: null, spend: null, status: "Error",
+            };
+        });
+
+        const healthyKeys = keys.filter(k => k.status === 'Healthy');
+        const providerBreakdown = [...new Set(healthyKeys.map(k => k.provider))].map(provider => {
+            const providerKeys = healthyKeys.filter(k => k.provider === provider);
+            return {
+                provider,
+                requests: providerKeys.reduce((s, k) => s + (k.requests || (k.promptTokens + k.completionTokens) || 0), 0),
+                spend: null,
+            };
+        }).filter(p => p.requests > 0);
+
+        return {
+            mode: 'live',
+            keys,
+            providerBreakdown,
+            modelBreakdown: [],
+            timeseries: [],
+            totals: {
+                spend: null,
+                requests: healthyKeys.reduce((s, k) => s + (k.requests || 0), 0),
+                requestsTrendPct: null,
+                activeKeys: keys.filter(k => k.status === 'Healthy').length,
+                revokedKeys: keys.filter(k => k.status === 'Error').length,
+                anomalies: null,
+            },
+        };
+    }
+
+    async function renderAnalyticsDashboard() {
+        const banner = document.getElementById('analytics-banner');
+
+        let data;
+        if (analyticsMode === 'live') {
+            banner.innerHTML = "Loading live data from your Monitoring tab entries...";
+            try {
+                data = await fetchLiveUsageData();
+                banner.innerHTML = "LIVE DATA &mdash; pulled just now from your configured monitors. Historical trend and per-model breakdown aren't wired up yet (shown as —).";
+            } catch (e) {
+                banner.innerHTML = `<span style="color:#dc3545;">Failed to load live data: ${e.message}</span>`;
+                return;
+            }
+        } else {
+            banner.innerHTML = "DEMO DATA &mdash; this dashboard is showing a synthetic dataset for presentation. Switch to \"Live Data\" to pull real numbers from your Monitoring tab entries.";
+            data = generateMockUsageData();
+        }
+
+        renderKPICards(data);
+        renderProviderDonut(data);
+        renderUsageTable(data);
+
+        if (data.mode === 'live') {
+            renderChartPlaceholder('chart-timeseries', "Historical trend requires storing periodic usage snapshots — not wired up yet.");
+            renderChartPlaceholder('chart-model-bars', "Per-model breakdown requires additional provider work — not wired up yet.");
+        } else {
+            renderTimeSeriesChart(data);
+            renderModelBars(data);
         }
     }
     </script>
