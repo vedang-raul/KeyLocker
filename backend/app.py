@@ -130,9 +130,9 @@ def require_same_user(user_id: int, current_user: Users):
 
 
 def mask_key(key: str) -> str:
-    if len(key) <= 8:
+    if len(key) <= 4:
         return "*" * len(key)
-    return f"{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}"
+    return f"{key[:4]}{'*' * 8}"
 
 
 @app.get("/")
